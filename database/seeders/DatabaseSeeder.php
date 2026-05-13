@@ -10,6 +10,7 @@ use App\Models\Saving;
 use App\Models\SavingTransaction;
 use App\Models\Student;
 use App\Models\User;
+use Faker\Factory as Faker;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -18,6 +19,7 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        $faker = Faker::create('id_ID');
         // ===== ADMIN USER =====
         User::create([
             'name' => 'Administrator',
@@ -108,8 +110,8 @@ class DatabaseSeeder extends Seeder
                 'mother_phone' => $data['mother_phone'],
                 'barcode_id' => 'STD-' . strtoupper(Str::random(8)),
                 'status' => 'active',
-                'birth_date' => fake()->dateTimeBetween('2008-01-01', '2012-12-31'),
-                'address' => fake()->address(),
+                'birth_date' => $faker->dateTimeBetween('2008-01-01', '2012-12-31'),
+                'address' => $faker->address(),
             ]);
 
             // Create savings account
@@ -131,7 +133,7 @@ class DatabaseSeeder extends Seeder
                     'description' => 'Top up saldo tabungan',
                     'transaction_id' => 'SAV-' . strtoupper(Str::random(10)),
                     'balance_after' => $runningBalance,
-                    'created_at' => fake()->dateTimeBetween('-6 months', 'now'),
+                    'created_at' => $faker->dateTimeBetween('-6 months', 'now'),
                 ]);
             }
             $saving->update(['balance' => $runningBalance]);
