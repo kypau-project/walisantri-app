@@ -9,6 +9,7 @@ use App\Models\OtpVerification;
 use App\Models\Saving;
 use App\Models\Student;
 use App\Models\User;
+use App\Services\FonnteService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
@@ -94,10 +95,20 @@ class AuthController extends Controller
             ])->withInput();
         }
 
+        $student->load('user', 'savingAccount');
+
         if ($student->isClaimed()) {
-            return back()->withErrors([
-                'nis' => 'Data santri ini sudah terdaftar oleh wali lain.',
-            ])->withInput();
+            if (!$student->user->isVerified()) {
+                // Lepaskan claim lama yang belum verifikasi agar bisa registrasi ulang
+                $oldUser = $student->user;
+                $student->update(['user_id' => null]);
+                $oldUser->delete();
+                $student->unsetRelation('user');
+            } else {
+                return back()->withErrors([
+                    'nis' => 'Data santri ini sudah terdaftar oleh wali lain.',
+                ])->withInput();
+            }
         }
 
         // Buat user wali
@@ -131,7 +142,15 @@ class AuthController extends Controller
 
         Auth::login($user);
 
-        return redirect('/verify-otp')->with('otp_debug', $otpCode);
+        // Kirim via Fonnte
+        $fonnte = new FonnteService();
+        $sent = $fonnte->sendOtp($request->phone, $otpCode);
+
+        $msg = $sent 
+            ? 'Registrasi berhasil. Kode OTP telah dikirim ke WhatsApp Anda.' 
+            : 'Registrasi berhasil, namun gagal mengirim OTP WA. Silakan minta kirim ulang.';
+
+        return redirect('/verify-otp')->with('success', $msg);
     }
 
     public function showVerifyOtp()
@@ -146,15 +165,8 @@ class AuthController extends Controller
             return redirect('/dashboard');
         }
 
-        // Ambil OTP terbaru untuk info debug
-        $latestOtp = OtpVerification::where('user_id', $user->id)
-            ->whereNull('verified_at')
-            ->latest()
-            ->first();
-
         return view('auth.verify-otp', [
             'phone' => $user->phone,
-            'otp_debug' => session('otp_debug') ?? ($latestOtp ? $latestOtp->otp_code : null),
         ]);
     }
 
@@ -220,7 +232,14 @@ class AuthController extends Controller
             'expires_at' => now()->addMinutes(5),
         ]);
 
-        return redirect('/verify-otp')->with('otp_debug', $otpCode)->with('success', 'Kode OTP baru telah dikirim.');
+        $fonnte = new FonnteService();
+        $sent = $fonnte->sendOtp($user->phone, $otpCode);
+
+        if ($sent) {
+            return redirect('/verify-otp')->with('success', 'Kode OTP baru telah dikirim via WhatsApp.');
+        }
+
+        return redirect('/verify-otp')->with('error', 'Gagal mengirim OTP WhatsApp. Silakan coba beberapa saat lagi.');
     }
 
     public function logout(Request $request)

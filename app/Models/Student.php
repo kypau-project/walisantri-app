@@ -38,7 +38,11 @@ class Student extends Model
 
     public function isClaimed(): bool
     {
-        return $this->user_id !== null;
+        if ($this->relationLoaded('user')) {
+            return $this->user !== null;
+        }
+
+        return $this->user()->exists();
     }
 
     public function user()

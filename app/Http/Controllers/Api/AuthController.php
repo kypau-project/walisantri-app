@@ -10,10 +10,10 @@ use App\Models\OtpVerification;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\Saving;
+use App\Services\FonnteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
@@ -80,6 +80,9 @@ class AuthController extends Controller
                 'requires_verification' => true,
                 'data' => [
                     'user_id' => $user->id,
+                    'phone' => $user->phone,
+                    'verify_otp_endpoint' => '/api/verify-otp',
+                    'resend_otp_endpoint' => '/api/resend-otp',
                 ],
             ], 403);
         }
@@ -120,12 +123,22 @@ class AuthController extends Controller
             ], 422);
         }
 
+        $student->load('user', 'savingAccount');
+
         // Cek apakah sudah diklaim wali lain
         if ($student->isClaimed()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Data santri ini sudah terdaftar oleh wali lain.',
-            ], 422);
+            if (!$student->user->isVerified()) {
+                // Lepaskan claim lama yang belum verifikasi agar bisa registrasi ulang
+                $oldUser = $student->user;
+                $student->update(['user_id' => null]);
+                $oldUser->delete();
+                $student->unsetRelation('user');
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Data santri ini sudah terdaftar oleh wali lain.',
+                ], 422);
+            }
         }
 
         // Buat user wali
@@ -148,23 +161,34 @@ class AuthController extends Controller
             ]);
         }
 
-        // Generate OTP
+        // Generate OTP & kirim via WhatsApp
         $otpCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-        $otp = OtpVerification::create([
+        OtpVerification::create([
             'user_id' => $user->id,
             'phone' => $request->phone,
             'otp_code' => $otpCode,
             'expires_at' => now()->addMinutes(5),
         ]);
 
+        // Kirim OTP via WhatsApp (Fonnte)
+        $fonnte = new FonnteService();
+        $sent = $fonnte->sendOtp($request->phone, $otpCode);
+
         return response()->json([
             'success' => true,
-            'message' => 'Registrasi berhasil. Silakan verifikasi kode OTP yang dikirim ke nomor HP Anda.',
+            'message' => $sent
+                ? 'Registrasi berhasil. Kode OTP telah dikirim ke WhatsApp Anda.'
+                : 'Registrasi berhasil. Kode OTP gagal dikirim, silakan minta kirim ulang.',
             'data' => [
                 'user_id' => $user->id,
                 'phone' => $request->phone,
-                // SIMULASI: tampilkan OTP di response (production: hapus ini)
-                'otp_code_debug' => $otpCode,
+                'otp_sent' => $sent,
+                'requires_verification' => true,
+                'next_step' => [
+                    'verify_otp_endpoint' => '/api/verify-otp',
+                    'resend_otp_endpoint' => '/api/resend-otp',
+                    'otp_expires_in_seconds' => 300,
+                ],
             ],
         ], 201);
     }
@@ -272,7 +296,7 @@ class AuthController extends Controller
             ], 429);
         }
 
-        // Generate OTP baru
+        // Generate OTP baru & kirim via WhatsApp
         $otpCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
         OtpVerification::create([
             'user_id' => $user->id,
@@ -281,13 +305,17 @@ class AuthController extends Controller
             'expires_at' => now()->addMinutes(5),
         ]);
 
+        $fonnte = new FonnteService();
+        $sent = $fonnte->sendOtp($user->phone, $otpCode);
+
         return response()->json([
             'success' => true,
-            'message' => 'Kode OTP baru telah dikirim ke nomor HP Anda.',
+            'message' => $sent
+                ? 'Kode OTP baru telah dikirim ke WhatsApp Anda.'
+                : 'Gagal mengirim OTP. Silakan coba lagi.',
             'data' => [
                 'phone' => $user->phone,
-                // SIMULASI: tampilkan OTP di response (production: hapus ini)
-                'otp_code_debug' => $otpCode,
+                'otp_sent' => $sent,
             ],
         ]);
     }

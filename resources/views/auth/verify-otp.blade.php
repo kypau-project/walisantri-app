@@ -134,25 +134,7 @@
         pointer-events: none;
     }
 
-    .debug-banner {
-        background: linear-gradient(135deg, #FEF3C7, #FFFBEB);
-        border: 1px solid #FCD34D;
-        border-radius: var(--radius-sm);
-        padding: 12px 16px;
-        margin-bottom: 20px;
-        font-size: 12px;
-        color: #92400E;
-        line-height: 1.5;
-    }
 
-    .debug-banner .otp-debug-code {
-        font-size: 24px;
-        font-weight: 800;
-        letter-spacing: 6px;
-        color: #B45309;
-        display: block;
-        margin-top: 4px;
-    }
 
     .timer {
         font-weight: 600;
@@ -200,12 +182,7 @@
         </div>
         @endif
 
-        @if ($otp_debug)
-        <div class="debug-banner">
-            <i class="fas fa-bug"></i> <strong>Mode Simulasi</strong> — Kode OTP Anda:
-            <span class="otp-debug-code">{{ $otp_debug }}</span>
-        </div>
-        @endif
+
 
         <form method="POST" action="/verify-otp" id="otpForm">
             @csrf
