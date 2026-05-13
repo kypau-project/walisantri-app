@@ -13,9 +13,11 @@ return new class extends Migration
             $table->string('name');
             $table->string('username')->unique();
             $table->string('email')->unique()->nullable();
+            $table->string('phone', 15)->nullable();
             $table->string('password');
             $table->enum('role', ['admin', 'wali'])->default('wali');
             $table->timestamp('email_verified_at')->nullable();
+            $table->timestamp('phone_verified_at')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

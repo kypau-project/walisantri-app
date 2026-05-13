@@ -13,9 +13,11 @@ use Illuminate\Support\Facades\Route;
 // Public routes
 Route::post('/login', [AuthController::class, 'login']);
 Route::post('/register', [AuthController::class, 'register']);
+Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+Route::post('/resend-otp', [AuthController::class, 'resendOtp']);
 
-// Protected routes
-Route::middleware('auth:sanctum')->group(function () {
+// Protected routes (requires auth + phone verified)
+Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsurePhoneVerified::class])->group(function () {
     // Auth
     Route::post('/logout', [AuthController::class, 'logout']);
     Route::get('/user', [AuthController::class, 'user']);
@@ -23,6 +25,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Profile
     Route::get('/profile', [ProfileController::class, 'show']);
     Route::put('/profile', [ProfileController::class, 'update']);
+    Route::get('/profile/photo', [ProfileController::class, 'photo']);
 
     // Bills
     Route::get('/bills', [BillController::class, 'index']);

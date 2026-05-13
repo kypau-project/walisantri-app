@@ -139,6 +139,12 @@
 
     .form-footer a:hover { text-decoration: underline; }
 
+    .input-hint {
+        font-size: 11px;
+        color: var(--text-muted);
+        margin-top: 4px;
+    }
+
     /* Desktop responsive */
     @media (min-width: 768px) {
         .login-page {
@@ -225,12 +231,13 @@
         <form method="POST" action="/login" id="loginForm">
             @csrf
             <div class="form-group">
-                <label class="form-label">Username</label>
+                <label class="form-label">Nama Santri / No. Induk</label>
                 <div class="input-icon-wrap">
-                    <i class="fas fa-user"></i>
-                    <input type="text" name="username" class="form-input" placeholder="Masukkan username"
-                           value="{{ old('username') }}" required autofocus id="username-input">
+                    <i class="fas fa-user-graduate"></i>
+                    <input type="text" name="identifier" class="form-input" placeholder="Masukkan nama santri atau NIS"
+                           value="{{ old('identifier') }}" required autofocus id="identifier-input">
                 </div>
+                <p class="input-hint">Contoh: Muhammad Rizki Fauzi atau No. Induk 2024001</p>
             </div>
 
             <div class="form-group">

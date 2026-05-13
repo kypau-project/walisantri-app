@@ -26,10 +26,18 @@
 
     @if($student)
     <div class="header-user">
-        <div class="user-avatar">{{ strtoupper(substr($student->name, 0, 1)) }}</div>
+        <div class="user-avatar-photo">
+            @if($student->photo)
+                <img src="{{ asset('storage/' . $student->photo) }}" alt="Foto {{ $student->name }}"
+                     onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                <span class="avatar-fallback" style="display:none;">{{ strtoupper(substr($student->name, 0, 1)) }}</span>
+            @else
+                <span class="avatar-fallback">{{ strtoupper(substr($student->name, 0, 1)) }}</span>
+            @endif
+        </div>
         <div class="user-info">
             <h3>{{ $student->name }}</h3>
-            <p>{{ $student->class }} · {{ $student->room }} · NIS: {{ $student->nis }}</p>
+            <p>{{ $student->class ?? '-' }} · {{ $student->room ?? '-' }} · No. Induk: {{ $student->nis }}</p>
         </div>
     </div>
     @endif
@@ -156,4 +164,38 @@
 
     </div><!-- /desktop-grid-2 -->
 </div>
+
+@section('styles')
+<style>
+.user-avatar-photo {
+    width: 50px;
+    height: 50px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: var(--primary-100);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.user-avatar-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.user-avatar-photo .avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    font-weight: 800;
+    color: white;
+    background: var(--primary);
+}
+</style>
+@endsection
 @endsection

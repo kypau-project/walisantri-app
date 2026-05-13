@@ -63,13 +63,32 @@
         gap: 12px;
     }
 
-    .error-text {
-        color: var(--danger);
+    .input-hint {
         font-size: 11px;
+        color: var(--text-muted);
         margin-top: 4px;
     }
 
-    /* Desktop responsive */
+    .info-banner {
+        background: linear-gradient(135deg, #DBEAFE, #EFF6FF);
+        border: 1px solid #93C5FD;
+        border-radius: var(--radius-sm);
+        padding: 14px 16px;
+        margin-bottom: 20px;
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+        font-size: 12px;
+        color: #1E40AF;
+        line-height: 1.5;
+    }
+
+    .info-banner i {
+        font-size: 16px;
+        margin-top: 1px;
+        flex-shrink: 0;
+    }
+
     @media (min-width: 768px) {
         .register-page {
             display: flex;
@@ -78,7 +97,7 @@
         }
 
         .register-form-container {
-            max-width: 600px;
+            max-width: 500px;
             width: 100%;
             border-radius: 24px;
             margin-bottom: 40px;
@@ -105,7 +124,7 @@
 
         .register-form-container {
             flex: none;
-            width: 560px;
+            width: 500px;
             min-height: 100vh;
             border-radius: 0;
             display: flex;
@@ -125,11 +144,18 @@
         <a href="/login" style="color:white;text-decoration:none;font-size:14px;display:inline-flex;align-items:center;gap:6px;margin-bottom:16px;">
             <i class="fas fa-arrow-left"></i> Kembali ke Login
         </a>
-        <h1>📝 Registrasi Baru</h1>
-        <p>Daftarkan akun wali santri baru</p>
+        <h1>📝 Registrasi Wali Santri</h1>
+        <p>Cocokkan data santri dari pesantren</p>
     </div>
 
     <div class="register-form-container">
+        <div class="info-banner">
+            <i class="fas fa-info-circle"></i>
+            <div>
+        Data santri diinput oleh pesantren. Wali santri hanya perlu mencocokkan <strong>nama lengkap</strong> dan <strong>No. Induk</strong> santri yang sudah terdaftar.
+            </div>
+        </div>
+
         @if ($errors->any())
         <div class="alert alert-error">
             <i class="fas fa-exclamation-circle"></i>
@@ -146,17 +172,37 @@
 
             <div class="form-section">
                 <div class="form-section-title">
-                    <i class="fas fa-user"></i> Data Akun
+                    <i class="fas fa-child"></i> Data Santri
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Nama Lengkap Wali</label>
-                    <input type="text" name="name" class="form-input" placeholder="Nama wali santri"
-                           value="{{ old('name') }}" required id="reg-name">
+                    <label class="form-label">Nama Lengkap Santri</label>
+                    <input type="text" name="student_name" class="form-input" placeholder="Nama sesuai data pesantren"
+                           value="{{ old('student_name') }}" required id="reg-student-name">
+                    <p class="input-hint">Contoh: Muhammad Rizki Fauzi</p>
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Username</label>
-                    <input type="text" name="username" class="form-input" placeholder="Username untuk login"
-                           value="{{ old('username') }}" required id="reg-username">
+                    <label class="form-label">Nomor Induk Santri</label>
+                    <input type="text" name="nis" class="form-input" placeholder="Masukkan No. Induk"
+                           value="{{ old('nis') }}" required id="reg-nis">
+                    <p class="input-hint">Contoh: 2024001</p>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-phone"></i> Kontak Wali
+                </div>
+                <div class="form-group">
+                    <label class="form-label">No. HP Wali Santri</label>
+                    <input type="tel" name="phone" class="form-input" placeholder="08xxxxxxxxxx"
+                           value="{{ old('phone') }}" required id="reg-phone">
+                    <p class="input-hint">Kode OTP akan dikirim ke nomor ini</p>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="form-section-title">
+                    <i class="fas fa-lock"></i> Keamanan
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -172,65 +218,14 @@
                 </div>
             </div>
 
-            <div class="form-section">
-                <div class="form-section-title">
-                    <i class="fas fa-child"></i> Data Santri
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Nama Santri</label>
-                    <input type="text" name="student_name" class="form-input" placeholder="Nama lengkap santri"
-                           value="{{ old('student_name') }}" required id="reg-student-name">
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">NIS</label>
-                        <input type="text" name="nis" class="form-input" placeholder="Nomor Induk Santri"
-                               value="{{ old('nis') }}" required id="reg-nis">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Jenis Kelamin</label>
-                        <select name="gender" class="form-select" id="reg-gender">
-                            <option value="L">Laki-laki</option>
-                            <option value="P">Perempuan</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">Kelas</label>
-                        <input type="text" name="class" class="form-input" placeholder="VII-A"
-                               value="{{ old('class') }}" id="reg-class">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Kamar</label>
-                        <input type="text" name="room" class="form-input" placeholder="Al-Fatihah"
-                               value="{{ old('room') }}" id="reg-room">
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-section">
-                <div class="form-section-title">
-                    <i class="fas fa-phone"></i> Kontak
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="form-label">No. HP Ayah</label>
-                        <input type="tel" name="father_phone" class="form-input" placeholder="08xxxxxxxxxx"
-                               value="{{ old('father_phone') }}" id="reg-father-phone">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">No. HP Ibu</label>
-                        <input type="tel" name="mother_phone" class="form-input" placeholder="08xxxxxxxxxx"
-                               value="{{ old('mother_phone') }}" id="reg-mother-phone">
-                    </div>
-                </div>
-            </div>
-
             <button type="submit" class="btn btn-primary btn-block btn-lg" id="register-btn">
-                <i class="fas fa-user-plus"></i> Daftar Sekarang
+                <i class="fas fa-user-plus"></i> Daftar & Verifikasi
             </button>
         </form>
+
+        <div style="text-align:center;margin-top:20px;font-size:13px;color:var(--text-secondary);">
+            Sudah punya akun? <a href="/login" style="color:var(--primary);font-weight:600;text-decoration:none;">Masuk di sini</a>
+        </div>
     </div>
 </div>
 @endsection

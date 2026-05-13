@@ -13,8 +13,12 @@ class Student extends Model
         'user_id',
         'name',
         'nis',
+        'nisn',
         'class',
         'room',
+        'enrollment_year',
+        'father_name',
+        'mother_name',
         'father_phone',
         'mother_phone',
         'barcode_id',
@@ -30,6 +34,11 @@ class Student extends Model
         return [
             'birth_date' => 'date',
         ];
+    }
+
+    public function isClaimed(): bool
+    {
+        return $this->user_id !== null;
     }
 
     public function user()

@@ -12,6 +12,7 @@ use App\Models\Report;
 use App\Models\Saving;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 class AdminController extends Controller
@@ -21,6 +22,8 @@ class AdminController extends Controller
         $stats = [
             'total_students' => Student::count(),
             'active_students' => Student::where('status', 'active')->count(),
+            'claimed_students' => Student::whereNotNull('user_id')->count(),
+            'unclaimed_students' => Student::whereNull('user_id')->count(),
             'total_bills' => Bill::count(),
             'pending_bills' => Bill::whereIn('status', ['pending', 'partial', 'overdue'])->count(),
             'total_payments' => Payment::where('status', 'success')->sum('amount'),
@@ -44,42 +47,57 @@ class AdminController extends Controller
         return view('admin.students.create');
     }
 
+    /**
+     * Tambah santri baru (data dari pesantren, TANPA user)
+     * Wali santri akan registrasi sendiri nanti
+     */
     public function storeStudent(Request $request)
     {
         $request->validate([
             'name' => 'required|string|max:255',
             'nis' => 'required|string|unique:students',
-            'username' => 'required|string|unique:users',
-            'password' => 'required|string|min:6',
-            'class' => 'nullable|string',
-            'room' => 'nullable|string',
+            'nisn' => 'nullable|string|max:20',
+            'class' => 'nullable|string|max:50',
+            'room' => 'nullable|string|max:50',
+            'enrollment_year' => 'nullable|string|max:20',
+            'gender' => 'required|in:L,P',
+            'birth_date' => 'nullable|date',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
             'father_phone' => 'nullable|string|min:8|max:15',
             'mother_phone' => 'nullable|string|min:8|max:15',
-            'gender' => 'required|in:L,P',
+            'address' => 'nullable|string|max:500',
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $user = User::create([
-            'name' => $request->name,
-            'username' => $request->username,
-            'password' => Hash::make($request->password),
-            'role' => 'wali',
-        ]);
+        $photoPath = null;
+        if ($request->hasFile('photo')) {
+            $photoPath = $request->file('photo')->store('photos/santri', 'public');
+        }
 
         $student = Student::create([
-            'user_id' => $user->id,
+            'user_id' => null,
             'name' => $request->name,
             'nis' => $request->nis,
+            'nisn' => $request->nisn,
             'class' => $request->class,
             'room' => $request->room,
+            'enrollment_year' => $request->enrollment_year,
+            'gender' => $request->gender,
+            'birth_date' => $request->birth_date,
+            'father_name' => $request->father_name,
+            'mother_name' => $request->mother_name,
             'father_phone' => $request->father_phone,
             'mother_phone' => $request->mother_phone,
-            'gender' => $request->gender,
+            'address' => $request->address,
+            'photo' => $photoPath,
             'barcode_id' => 'STD-' . strtoupper(Str::random(8)),
+            'status' => 'active',
         ]);
 
         Saving::create(['student_id' => $student->id, 'balance' => 0]);
 
-        return redirect('/admin/students')->with('success', 'Santri berhasil ditambahkan.');
+        return redirect('/admin/students')->with('success', 'Data santri berhasil ditambahkan. Wali santri dapat mendaftar dengan mencocokkan nama & No. Induk.');
     }
 
     public function editStudent($id)
@@ -88,19 +106,54 @@ class AdminController extends Controller
         return view('admin.students.edit', compact('student'));
     }
 
+    /**
+     * Update data santri + foto
+     */
     public function updateStudent(Request $request, $id)
     {
         $student = Student::findOrFail($id);
 
         $request->validate([
             'name' => 'required|string|max:255',
-            'class' => 'nullable|string',
-            'room' => 'nullable|string',
+            'nisn' => 'nullable|string|max:20',
+            'class' => 'nullable|string|max:50',
+            'room' => 'nullable|string|max:50',
+            'enrollment_year' => 'nullable|string|max:20',
+            'gender' => 'required|in:L,P',
+            'birth_date' => 'nullable|date',
+            'father_name' => 'nullable|string|max:255',
+            'mother_name' => 'nullable|string|max:255',
             'father_phone' => 'nullable|string|min:8|max:15',
             'mother_phone' => 'nullable|string|min:8|max:15',
+            'address' => 'nullable|string|max:500',
+            'status' => 'required|in:active,inactive,alumni',
+            'photo' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
         ]);
 
-        $student->update($request->only('name', 'class', 'room', 'father_phone', 'mother_phone', 'address', 'gender', 'status'));
+        // Handle foto upload
+        if ($request->hasFile('photo')) {
+            if ($student->photo && Storage::disk('public')->exists($student->photo)) {
+                Storage::disk('public')->delete($student->photo);
+            }
+            $student->photo = $request->file('photo')->store('photos/santri', 'public');
+        }
+
+        $student->update([
+            'name' => $request->name,
+            'nisn' => $request->nisn,
+            'class' => $request->class,
+            'room' => $request->room,
+            'enrollment_year' => $request->enrollment_year,
+            'gender' => $request->gender,
+            'birth_date' => $request->birth_date,
+            'father_name' => $request->father_name,
+            'mother_name' => $request->mother_name,
+            'father_phone' => $request->father_phone,
+            'mother_phone' => $request->mother_phone,
+            'address' => $request->address,
+            'status' => $request->status,
+            'photo' => $student->photo,
+        ]);
 
         return redirect('/admin/students')->with('success', 'Data santri berhasil diperbarui.');
     }
@@ -108,7 +161,18 @@ class AdminController extends Controller
     public function deleteStudent($id)
     {
         $student = Student::findOrFail($id);
-        $student->user->delete();
+
+        // Hapus foto
+        if ($student->photo && Storage::disk('public')->exists($student->photo)) {
+            Storage::disk('public')->delete($student->photo);
+        }
+
+        // Hapus user jika ada
+        if ($student->user) {
+            $student->user->delete();
+        }
+
+        $student->delete();
 
         return redirect('/admin/students')->with('success', 'Data santri berhasil dihapus.');
     }

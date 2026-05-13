@@ -6,32 +6,84 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Requests\RegisterRequest;
 use App\Http\Resources\StudentResource;
+use App\Models\OtpVerification;
 use App\Models\Student;
 use App\Models\User;
 use App\Models\Saving;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class AuthController extends Controller
 {
     /**
-     * Login user and create token
+     * Login user via nama santri atau NIS
      */
     public function login(LoginRequest $request): JsonResponse
     {
-        $credentials = $request->only('username', 'password');
+        $identifier = $request->identifier;
+        $password = $request->password;
 
-        if (!Auth::attempt(['username' => $credentials['username'], 'password' => $credentials['password']])) {
+        // Cek admin login (via username)
+        $adminUser = User::where('username', $identifier)->where('role', 'admin')->first();
+        if ($adminUser && Hash::check($password, $adminUser->password)) {
+            $token = $adminUser->createToken('auth-token')->plainTextToken;
+            return response()->json([
+                'success' => true,
+                'message' => 'Login berhasil.',
+                'data' => [
+                    'user' => [
+                        'id' => $adminUser->id,
+                        'name' => $adminUser->name,
+                        'username' => $adminUser->username,
+                        'role' => $adminUser->role,
+                    ],
+                    'token' => $token,
+                ],
+            ]);
+        }
+
+        // Cari student berdasarkan NIS atau nama
+        $student = Student::where('nis', $identifier)
+            ->orWhere('name', $identifier)
+            ->first();
+
+        if (!$student) {
             return response()->json([
                 'success' => false,
-                'message' => 'Username atau password salah.',
+                'message' => 'Data santri tidak ditemukan.',
             ], 401);
         }
 
-        $user = Auth::user();
+        if (!$student->isClaimed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun wali santri belum terdaftar. Silakan registrasi terlebih dahulu.',
+            ], 401);
+        }
+
+        $user = $student->user;
+
+        if (!Hash::check($password, $user->password)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Nama santri/NIS atau password salah.',
+            ], 401);
+        }
+
+        // Cek verifikasi OTP
+        if (!$user->isVerified()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun belum diverifikasi. Silakan verifikasi OTP terlebih dahulu.',
+                'requires_verification' => true,
+                'data' => [
+                    'user_id' => $user->id,
+                ],
+            ], 403);
+        }
+
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
@@ -43,58 +95,201 @@ class AuthController extends Controller
                     'name' => $user->name,
                     'username' => $user->username,
                     'role' => $user->role,
+                    'phone' => $user->phone,
                 ],
+                'student' => new StudentResource($student),
                 'token' => $token,
             ],
         ]);
     }
 
     /**
-     * Register new wali santri
+     * Register wali santri — cocokkan dengan data santri yang sudah ada
      */
     public function register(RegisterRequest $request): JsonResponse
     {
+        // Cari student berdasarkan nama DAN NIS
+        $student = Student::where('name', $request->student_name)
+            ->where('nis', $request->nis)
+            ->first();
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data santri tidak ditemukan. Pastikan nama lengkap dan NIS sesuai dengan data pesantren.',
+            ], 422);
+        }
+
+        // Cek apakah sudah diklaim wali lain
+        if ($student->isClaimed()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data santri ini sudah terdaftar oleh wali lain.',
+            ], 422);
+        }
+
+        // Buat user wali
         $user = User::create([
-            'name' => $request->name,
-            'username' => $request->username,
+            'name' => $request->student_name,
+            'username' => $request->nis,
+            'phone' => $request->phone,
             'password' => Hash::make($request->password),
             'role' => 'wali',
         ]);
 
-        $student = Student::create([
+        // Hubungkan student ke user
+        $student->update(['user_id' => $user->id]);
+
+        // Buat tabungan jika belum ada
+        if (!$student->savingAccount) {
+            Saving::create([
+                'student_id' => $student->id,
+                'balance' => 0,
+            ]);
+        }
+
+        // Generate OTP
+        $otpCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        $otp = OtpVerification::create([
             'user_id' => $user->id,
-            'name' => $request->student_name,
-            'nis' => $request->nis,
-            'class' => $request->class,
-            'room' => $request->room,
-            'father_phone' => $request->father_phone,
-            'mother_phone' => $request->mother_phone,
-            'gender' => $request->gender ?? 'L',
-            'barcode_id' => 'STD-' . strtoupper(Str::random(8)),
+            'phone' => $request->phone,
+            'otp_code' => $otpCode,
+            'expires_at' => now()->addMinutes(5),
         ]);
 
-        // Create savings account
-        Saving::create([
-            'student_id' => $student->id,
-            'balance' => 0,
+        return response()->json([
+            'success' => true,
+            'message' => 'Registrasi berhasil. Silakan verifikasi kode OTP yang dikirim ke nomor HP Anda.',
+            'data' => [
+                'user_id' => $user->id,
+                'phone' => $request->phone,
+                // SIMULASI: tampilkan OTP di response (production: hapus ini)
+                'otp_code_debug' => $otpCode,
+            ],
+        ], 201);
+    }
+
+    /**
+     * Verifikasi kode OTP
+     */
+    public function verifyOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+            'otp_code' => 'required|string|size:6',
         ]);
+
+        $user = User::findOrFail($request->user_id);
+
+        // Cari OTP terbaru yang belum terverifikasi
+        $otp = OtpVerification::where('user_id', $user->id)
+            ->whereNull('verified_at')
+            ->latest()
+            ->first();
+
+        if (!$otp) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP tidak ditemukan. Silakan minta kirim ulang.',
+            ], 422);
+        }
+
+        if ($otp->isExpired()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP sudah kadaluarsa. Silakan minta kirim ulang.',
+            ], 422);
+        }
+
+        if ($otp->hasMaxAttempts()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Terlalu banyak percobaan. Silakan minta kirim ulang OTP.',
+            ], 429);
+        }
+
+        // Increment attempts
+        $otp->increment('attempts');
+
+        if ($otp->otp_code !== $request->otp_code) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Kode OTP salah. Sisa percobaan: ' . (5 - $otp->attempts),
+            ], 422);
+        }
+
+        // Verifikasi berhasil
+        $otp->update(['verified_at' => now()]);
+        $user->update(['phone_verified_at' => now()]);
 
         $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'success' => true,
-            'message' => 'Registrasi berhasil.',
+            'message' => 'Verifikasi berhasil! Akun Anda sudah aktif.',
             'data' => [
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
                     'username' => $user->username,
                     'role' => $user->role,
+                    'phone' => $user->phone,
                 ],
-                'student' => new StudentResource($student),
+                'student' => $user->student ? new StudentResource($user->student) : null,
                 'token' => $token,
             ],
-        ], 201);
+        ]);
+    }
+
+    /**
+     * Kirim ulang kode OTP
+     */
+    public function resendOtp(Request $request): JsonResponse
+    {
+        $request->validate([
+            'user_id' => 'required|exists:users,id',
+        ]);
+
+        $user = User::findOrFail($request->user_id);
+
+        if ($user->isVerified()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Akun sudah terverifikasi.',
+            ], 422);
+        }
+
+        // Cek rate limit: 1 OTP per 60 detik
+        $lastOtp = OtpVerification::where('user_id', $user->id)
+            ->latest()
+            ->first();
+
+        if ($lastOtp && $lastOtp->created_at->diffInSeconds(now()) < 60) {
+            $remaining = 60 - $lastOtp->created_at->diffInSeconds(now());
+            return response()->json([
+                'success' => false,
+                'message' => "Tunggu {$remaining} detik sebelum mengirim ulang OTP.",
+            ], 429);
+        }
+
+        // Generate OTP baru
+        $otpCode = str_pad(random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+        OtpVerification::create([
+            'user_id' => $user->id,
+            'phone' => $user->phone,
+            'otp_code' => $otpCode,
+            'expires_at' => now()->addMinutes(5),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Kode OTP baru telah dikirim ke nomor HP Anda.',
+            'data' => [
+                'phone' => $user->phone,
+                // SIMULASI: tampilkan OTP di response (production: hapus ini)
+                'otp_code_debug' => $otpCode,
+            ],
+        ]);
     }
 
     /**
@@ -125,6 +320,8 @@ class AuthController extends Controller
                 'name' => $user->name,
                 'username' => $user->username,
                 'role' => $user->role,
+                'phone' => $user->phone,
+                'is_verified' => $user->isVerified(),
                 'student' => $user->student ? new StudentResource($user->student) : null,
             ],
         ]);

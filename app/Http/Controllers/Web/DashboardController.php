@@ -33,6 +33,25 @@ class DashboardController extends Controller
         return view('profile.index', compact('student'));
     }
 
+    public function updateProfile(Request $request)
+    {
+        $request->validate([
+            'father_phone' => 'nullable|string|min:8|max:15|regex:/^[0-9]+$/',
+            'mother_phone' => 'nullable|string|min:8|max:15|regex:/^[0-9]+$/',
+            'address' => 'nullable|string|max:500',
+        ]);
+
+        $student = $request->user()->student;
+
+        if (!$student) {
+            return back()->with('error', 'Data santri tidak ditemukan.');
+        }
+
+        $student->update($request->only('father_phone', 'mother_phone', 'address'));
+
+        return back()->with('success', 'Data kontak berhasil diperbarui.');
+    }
+
     public function bills(Request $request)
     {
         $student = $request->user()->student;

@@ -2,61 +2,147 @@
 @section('page-title', 'Tambah Santri')
 
 @section('content')
-<div class="admin-card" style="max-width:700px;">
-    <h3>Form Tambah Santri Baru</h3>
-    <form method="POST" action="/admin/students">
+<div class="admin-card" style="max-width:750px;">
+    <h3>Form Tambah Data Santri</h3>
+    <p style="font-size:13px;color:var(--text-secondary);margin-bottom:20px;">
+        <i class="fas fa-info-circle" style="color:var(--info);"></i>
+        Data santri diinput oleh pesantren. Wali santri akan mendaftar sendiri dengan mencocokkan nama & No. Induk.
+    </p>
+
+    @if ($errors->any())
+    <div class="alert alert-error" style="margin-bottom:16px;">
+        <i class="fas fa-exclamation-circle"></i>
+        <div>
+            @foreach ($errors->all() as $error)
+            <div>{{ $error }}</div>
+            @endforeach
+        </div>
+    </div>
+    @endif
+
+    <form method="POST" action="/admin/students" enctype="multipart/form-data">
         @csrf
+
+        {{-- Foto Profil --}}
+        <div class="form-group" style="margin-bottom:20px;">
+            <label class="form-label">Pass Foto Santri</label>
+            <div style="display:flex;align-items:center;gap:16px;">
+                <div id="photoPreview" style="width:100px;height:130px;border-radius:var(--radius-sm);background:#F1F5F9;display:flex;align-items:center;justify-content:center;overflow:hidden;border:2px dashed var(--border);">
+                    <i class="fas fa-user" style="font-size:32px;color:var(--text-muted);"></i>
+                </div>
+                <div>
+                    <input type="file" name="photo" accept="image/jpeg,image/png" id="photoInput"
+                           style="display:none;" onchange="previewPhoto(this)">
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="document.getElementById('photoInput').click()">
+                        <i class="fas fa-camera"></i> Pilih Foto
+                    </button>
+                    <p style="font-size:11px;color:var(--text-muted);margin-top:6px;">JPG/PNG, maks 2MB, ukuran 3x4</p>
+                </div>
+            </div>
+        </div>
+
         <div class="form-row">
             <div class="form-group">
-                <label class="form-label">Nama Santri *</label>
-                <input type="text" name="name" class="form-input" required value="{{ old('name') }}" id="admin-student-name">
+                <label class="form-label">Nama Lengkap Santri *</label>
+                <input type="text" name="name" class="form-input" required value="{{ old('name') }}"
+                       placeholder="Nama lengkap sesuai dokumen">
             </div>
             <div class="form-group">
-                <label class="form-label">NIS *</label>
-                <input type="text" name="nis" class="form-input" required value="{{ old('nis') }}" id="admin-student-nis">
+                <label class="form-label">Jenis Kelamin *</label>
+                <select name="gender" class="form-select">
+                    <option value="L" {{ old('gender') === 'L' ? 'selected' : '' }}>Laki-laki</option>
+                    <option value="P" {{ old('gender') === 'P' ? 'selected' : '' }}>Perempuan</option>
+                </select>
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label class="form-label">Username (Login) *</label>
-                <input type="text" name="username" class="form-input" required value="{{ old('username') }}" id="admin-student-username">
+                <label class="form-label">No. Induk *</label>
+                <input type="text" name="nis" class="form-input" required value="{{ old('nis') }}"
+                       placeholder="Nomor induk pesantren">
             </div>
             <div class="form-group">
-                <label class="form-label">Password *</label>
-                <input type="password" name="password" class="form-input" required id="admin-student-password">
+                <label class="form-label">NISN</label>
+                <input type="text" name="nisn" class="form-input" value="{{ old('nisn') }}"
+                       placeholder="Nomor Induk Siswa Nasional">
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
                 <label class="form-label">Kelas</label>
-                <input type="text" name="class" class="form-input" value="{{ old('class') }}" id="admin-student-class">
+                <input type="text" name="class" class="form-input" value="{{ old('class') }}"
+                       placeholder="Contoh: 1C-PI">
             </div>
             <div class="form-group">
                 <label class="form-label">Kamar</label>
-                <input type="text" name="room" class="form-input" value="{{ old('room') }}" id="admin-student-room">
+                <input type="text" name="room" class="form-input" value="{{ old('room') }}"
+                       placeholder="Contoh: D7">
             </div>
         </div>
         <div class="form-row">
             <div class="form-group">
-                <label class="form-label">Jenis Kelamin *</label>
-                <select name="gender" class="form-select" id="admin-student-gender">
-                    <option value="L">Laki-laki</option>
-                    <option value="P">Perempuan</option>
-                </select>
+                <label class="form-label">Tahun Masuk</label>
+                <input type="text" name="enrollment_year" class="form-input" value="{{ old('enrollment_year') }}"
+                       placeholder="Contoh: 2024-2025">
             </div>
             <div class="form-group">
-                <label class="form-label">No. HP Ayah</label>
-                <input type="tel" name="father_phone" class="form-input" value="{{ old('father_phone') }}" id="admin-student-father-phone">
+                <label class="form-label">Tanggal Lahir</label>
+                <input type="date" name="birth_date" class="form-input" value="{{ old('birth_date') }}">
             </div>
         </div>
-        <div class="form-group">
-            <label class="form-label">No. HP Ibu</label>
-            <input type="tel" name="mother_phone" class="form-input" value="{{ old('mother_phone') }}" id="admin-student-mother-phone">
+
+        <hr style="margin:16px 0;border:none;border-top:1px solid var(--border);">
+        <h4 style="font-size:14px;font-weight:700;color:var(--primary-dark);margin-bottom:12px;">
+            <i class="fas fa-users" style="margin-right:6px;"></i> Data Orang Tua
+        </h4>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">Nama Ayah</label>
+                <input type="text" name="father_name" class="form-input" value="{{ old('father_name') }}"
+                       placeholder="Nama lengkap ayah">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Nama Ibu</label>
+                <input type="text" name="mother_name" class="form-input" value="{{ old('mother_name') }}"
+                       placeholder="Nama lengkap ibu">
+            </div>
         </div>
-        <div style="display:flex;gap:10px;">
+        <div class="form-row">
+            <div class="form-group">
+                <label class="form-label">No. WA Ayah</label>
+                <input type="tel" name="father_phone" class="form-input" value="{{ old('father_phone') }}"
+                       placeholder="08xxxxxxxxxx">
+            </div>
+            <div class="form-group">
+                <label class="form-label">No. WA Ibu</label>
+                <input type="tel" name="mother_phone" class="form-input" value="{{ old('mother_phone') }}"
+                       placeholder="08xxxxxxxxxx">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Alamat</label>
+            <textarea name="address" class="form-input" rows="2" placeholder="Alamat lengkap santri">{{ old('address') }}</textarea>
+        </div>
+
+        <div style="display:flex;gap:10px;margin-top:12px;">
             <a href="/admin/students" class="btn btn-secondary">Batal</a>
-            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan</button>
+            <button type="submit" class="btn btn-primary"><i class="fas fa-save"></i> Simpan Data Santri</button>
         </div>
     </form>
 </div>
+
+<script>
+function previewPhoto(input) {
+    const preview = document.getElementById('photoPreview');
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.innerHTML = '<img src="' + e.target.result + '" style="width:100%;height:100%;object-fit:cover;">';
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
+</script>
 @endsection

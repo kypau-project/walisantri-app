@@ -14,28 +14,25 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255',
-            'username' => 'required|string|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed',
             'student_name' => 'required|string|max:255',
-            'nis' => 'required|string|unique:students,nis',
-            'class' => 'nullable|string|max:50',
-            'room' => 'nullable|string|max:50',
-            'father_phone' => 'nullable|string|min:8|max:15|regex:/^[0-9]+$/',
-            'mother_phone' => 'nullable|string|min:8|max:15|regex:/^[0-9]+$/',
-            'gender' => 'nullable|in:L,P',
+            'nis' => 'required|string|max:50',
+            'phone' => 'required|string|min:8|max:15|regex:/^[0-9]+$/',
+            'password' => 'required|string|min:6|confirmed',
         ];
     }
 
     public function messages(): array
     {
         return [
-            'father_phone.min' => 'Nomor HP Ayah minimal 8 digit.',
-            'father_phone.max' => 'Nomor HP Ayah maksimal 15 digit.',
-            'father_phone.regex' => 'Nomor HP Ayah harus berupa angka.',
-            'mother_phone.min' => 'Nomor HP Ibu minimal 8 digit.',
-            'mother_phone.max' => 'Nomor HP Ibu maksimal 15 digit.',
-            'mother_phone.regex' => 'Nomor HP Ibu harus berupa angka.',
+            'student_name.required' => 'Nama lengkap santri wajib diisi.',
+            'nis.required' => 'Nomor Induk Santri wajib diisi.',
+            'phone.required' => 'No. HP wali santri wajib diisi.',
+            'phone.min' => 'No. HP minimal 8 digit.',
+            'phone.max' => 'No. HP maksimal 15 digit.',
+            'phone.regex' => 'No. HP harus berupa angka.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 6 karakter.',
+            'password.confirmed' => 'Konfirmasi password tidak cocok.',
         ];
     }
 }

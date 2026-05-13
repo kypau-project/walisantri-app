@@ -20,92 +20,182 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $faker = Faker::create('id_ID');
+
         // ===== ADMIN USER =====
         User::create([
             'name' => 'Administrator',
             'username' => 'admin',
             'email' => 'admin@uqi.ac.id',
+            'phone' => '081200000000',
             'password' => Hash::make('admin123'),
             'role' => 'admin',
+            'phone_verified_at' => now(),
         ]);
 
-        // ===== WALI SANTRI USERS + STUDENTS =====
-        $santriData = [
+        // ===== DATA SANTRI DARI PESANTREN (tanpa user/wali) =====
+        $santriPesantren = [
             [
-                'wali_name' => 'Ahmad Fauzi',
-                'username' => 'wali1',
+                'name' => 'Ahmad Fauzan Habibi',
+                'nis' => '2024010', 'nisn' => '0078901234',
+                'class' => '1A-PA', 'room' => 'A1',
+                'enrollment_year' => '2024-2025',
+                'gender' => 'L',
+                'father_name' => 'H. Habibi Syahrul', 'mother_name' => 'Hj. Nurjannah',
+            ],
+            [
+                'name' => 'Siti Aisyah Zahra',
+                'nis' => '2024011', 'nisn' => '0078901235',
+                'class' => '1B-PI', 'room' => 'B3',
+                'enrollment_year' => '2024-2025',
+                'gender' => 'P',
+                'father_name' => 'Ahmad Zahroni', 'mother_name' => 'Siti Mariam',
+            ],
+            [
+                'name' => 'Muhammad Haikal',
+                'nis' => '2024012', 'nisn' => '0078901236',
+                'class' => '2A-PA', 'room' => 'C2',
+                'enrollment_year' => '2023-2024',
+                'gender' => 'L',
+                'father_name' => 'Ir. Haikal Mansur', 'mother_name' => 'Dewi Sartika',
+            ],
+            [
+                'name' => 'Fatimah Azzahra',
+                'nis' => '2024013', 'nisn' => '0078901237',
+                'class' => '1C-PI', 'room' => 'D7',
+                'enrollment_year' => '2024-2025',
+                'gender' => 'P',
+                'father_name' => 'Ustadz Mukhtar', 'mother_name' => 'Hj. Fatimah',
+            ],
+            [
+                'name' => 'Abdullah Syafiq',
+                'nis' => '2024014', 'nisn' => '0078901238',
+                'class' => '3A-PA', 'room' => 'A5',
+                'enrollment_year' => '2022-2023',
+                'gender' => 'L',
+                'father_name' => 'Syafiq Abdullah', 'mother_name' => 'Aminah Rahmawati',
+            ],
+            [
+                'name' => 'Khadijah Nur Aini',
+                'nis' => '2024015', 'nisn' => '0078901239',
+                'class' => '2B-PI', 'room' => 'B7',
+                'enrollment_year' => '2023-2024',
+                'gender' => 'P',
+                'father_name' => 'Dr. Nur Hasan', 'mother_name' => 'Khadijah Aminah',
+            ],
+            [
+                'name' => 'Umar Faruq',
+                'nis' => '2024016', 'nisn' => '0078901240',
+                'class' => '3B-PA', 'room' => 'C4',
+                'enrollment_year' => '2022-2023',
+                'gender' => 'L',
+                'father_name' => 'Faruq Ismail', 'mother_name' => 'Halimah Tusadiyah',
+            ],
+            [
+                'name' => 'Hafidza Ramadhani',
+                'nis' => '2024017', 'nisn' => '0078901241',
+                'class' => '1A-PI', 'room' => 'D3',
+                'enrollment_year' => '2024-2025',
+                'gender' => 'P',
+                'father_name' => 'Ramadhan Wijaya', 'mother_name' => 'Sri Wahyuni',
+            ],
+        ];
+
+        foreach ($santriPesantren as $data) {
+            Student::create([
+                'user_id' => null,
+                'name' => $data['name'],
+                'nis' => $data['nis'],
+                'nisn' => $data['nisn'],
+                'class' => $data['class'],
+                'room' => $data['room'],
+                'enrollment_year' => $data['enrollment_year'],
+                'gender' => $data['gender'],
+                'father_name' => $data['father_name'],
+                'mother_name' => $data['mother_name'],
+                'barcode_id' => 'STD-' . strtoupper(Str::random(8)),
+                'status' => 'active',
+                'birth_date' => $faker->dateTimeBetween('2008-01-01', '2014-12-31'),
+            ]);
+        }
+
+        // ===== SANTRI DENGAN WALI TERDAFTAR (untuk testing login) =====
+        $santriDenganWali = [
+            [
                 'student_name' => 'Muhammad Rizki Fauzi',
-                'nis' => '2024001',
-                'class' => 'VII-A',
-                'room' => 'Al-Fatihah',
+                'nis' => '2024001', 'nisn' => '0071234567',
+                'class' => 'VII-A', 'room' => 'Al-Fatihah',
+                'enrollment_year' => '2024-2025',
                 'gender' => 'L',
-                'father_phone' => '081234567890',
-                'mother_phone' => '081234567891',
+                'father_name' => 'H. Fauzi Rahman', 'mother_name' => 'Hj. Aisyah Fauzi',
+                'phone' => '081234567890',
+                'father_phone' => '081234567890', 'mother_phone' => '081234567891',
             ],
             [
-                'wali_name' => 'Siti Aminah',
-                'username' => 'wali2',
                 'student_name' => 'Aisyah Putri Aminah',
-                'nis' => '2024002',
-                'class' => 'VII-B',
-                'room' => 'Al-Baqarah',
+                'nis' => '2024002', 'nisn' => '0071234568',
+                'class' => '1C-PI', 'room' => 'D7',
+                'enrollment_year' => '2024-2025',
                 'gender' => 'P',
-                'father_phone' => '082345678901',
-                'mother_phone' => '082345678902',
+                'father_name' => 'Aminah Siregar', 'mother_name' => 'Putri Handayani',
+                'phone' => '082345678901',
+                'father_phone' => '082345678901', 'mother_phone' => '082345678902',
             ],
             [
-                'wali_name' => 'Budi Santoso',
-                'username' => 'wali3',
                 'student_name' => 'Fajar Ramadhan',
-                'nis' => '2024003',
-                'class' => 'VIII-A',
-                'room' => 'Ali Imran',
+                'nis' => '2024003', 'nisn' => '0071234569',
+                'class' => '2A-PA', 'room' => 'C2',
+                'enrollment_year' => '2023-2024',
                 'gender' => 'L',
-                'father_phone' => '083456789012',
-                'mother_phone' => '083456789013',
+                'father_name' => 'Ramadhan Hakim', 'mother_name' => 'Nurul Hidayah',
+                'phone' => '083456789012',
+                'father_phone' => '083456789012', 'mother_phone' => '083456789013',
             ],
             [
-                'wali_name' => 'Dewi Kartika',
-                'username' => 'wali4',
                 'student_name' => 'Nur Hidayah',
-                'nis' => '2024004',
-                'class' => 'VIII-B',
-                'room' => 'An-Nisa',
+                'nis' => '2024004', 'nisn' => '0071234570',
+                'class' => '2B-PI', 'room' => 'B7',
+                'enrollment_year' => '2023-2024',
                 'gender' => 'P',
-                'father_phone' => '084567890123',
-                'mother_phone' => '084567890124',
+                'father_name' => 'Hidayat Surya', 'mother_name' => 'Nur Aisyah',
+                'phone' => '084567890123',
+                'father_phone' => '084567890123', 'mother_phone' => '084567890124',
             ],
             [
-                'wali_name' => 'Hasan Abdullah',
-                'username' => 'wali5',
                 'student_name' => 'Umar Abdullah',
-                'nis' => '2024005',
-                'class' => 'IX-A',
-                'room' => 'Al-Maidah',
+                'nis' => '2024005', 'nisn' => '0071234571',
+                'class' => '3A-PA', 'room' => 'A5',
+                'enrollment_year' => '2022-2023',
                 'gender' => 'L',
-                'father_phone' => '085678901234',
-                'mother_phone' => '085678901235',
+                'father_name' => 'Abdullah Mansur', 'mother_name' => 'Maryam Abdullah',
+                'phone' => '085678901234',
+                'father_phone' => '085678901234', 'mother_phone' => '085678901235',
             ],
         ];
 
         $months = ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'];
         $monthNames = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
 
-        foreach ($santriData as $index => $data) {
+        foreach ($santriDenganWali as $index => $data) {
             $user = User::create([
-                'name' => $data['wali_name'],
-                'username' => $data['username'],
+                'name' => $data['student_name'],
+                'username' => $data['nis'],
+                'phone' => $data['phone'],
                 'password' => Hash::make('password'),
                 'role' => 'wali',
+                'phone_verified_at' => now(),
             ]);
 
             $student = Student::create([
                 'user_id' => $user->id,
                 'name' => $data['student_name'],
                 'nis' => $data['nis'],
+                'nisn' => $data['nisn'],
                 'class' => $data['class'],
                 'room' => $data['room'],
+                'enrollment_year' => $data['enrollment_year'],
                 'gender' => $data['gender'],
+                'father_name' => $data['father_name'],
+                'mother_name' => $data['mother_name'],
                 'father_phone' => $data['father_phone'],
                 'mother_phone' => $data['mother_phone'],
                 'barcode_id' => 'STD-' . strtoupper(Str::random(8)),
@@ -114,14 +204,9 @@ class DatabaseSeeder extends Seeder
                 'address' => $faker->address(),
             ]);
 
-            // Create savings account
             $savingBalance = rand(50000, 500000);
-            $saving = Saving::create([
-                'student_id' => $student->id,
-                'balance' => $savingBalance,
-            ]);
+            $saving = Saving::create(['student_id' => $student->id, 'balance' => $savingBalance]);
 
-            // Create saving transactions
             $runningBalance = 0;
             for ($t = 0; $t < rand(3, 6); $t++) {
                 $topupAmount = rand(50000, 200000);
@@ -138,10 +223,9 @@ class DatabaseSeeder extends Seeder
             }
             $saving->update(['balance' => $runningBalance]);
 
-            // Create bills (SPP for 12 months)
             foreach ($months as $mi => $month) {
-                $isPaid = $mi < 3; // First 3 months paid
-                $isPartial = $mi === 3; // 4th month partial
+                $isPaid = $mi < 3;
+                $isPartial = $mi === 3;
 
                 $bill = Bill::create([
                     'student_id' => $student->id,
@@ -156,7 +240,6 @@ class DatabaseSeeder extends Seeder
                     'due_date' => "2024-{$month}-10",
                 ]);
 
-                // Create payment records for paid bills
                 if ($isPaid || $isPartial) {
                     Payment::create([
                         'student_id' => $student->id,
@@ -170,32 +253,25 @@ class DatabaseSeeder extends Seeder
                 }
             }
 
-            // Extra bills (registration, uniform)
             if ($index < 3) {
                 Bill::create([
                     'student_id' => $student->id,
                     'title' => 'Daftar Ulang TA 2024/2025',
                     'description' => 'Biaya daftar ulang tahun ajaran baru',
-                    'amount' => 2500000,
-                    'paid_amount' => 2500000,
-                    'type' => 'daftar_ulang',
-                    'status' => 'paid',
+                    'amount' => 2500000, 'paid_amount' => 2500000,
+                    'type' => 'daftar_ulang', 'status' => 'paid',
                     'due_date' => '2024-07-15',
                 ]);
-
                 Bill::create([
                     'student_id' => $student->id,
                     'title' => 'Seragam Baru',
                     'description' => 'Biaya seragam pesantren',
-                    'amount' => 850000,
-                    'paid_amount' => 0,
-                    'type' => 'seragam',
-                    'status' => 'pending',
+                    'amount' => 850000, 'paid_amount' => 0,
+                    'type' => 'seragam', 'status' => 'pending',
                     'due_date' => '2024-08-01',
                 ]);
             }
 
-            // Create reports
             $subjects = [
                 ['subject' => 'Al-Quran', 'score' => rand(75, 98)],
                 ['subject' => 'Hadits', 'score' => rand(70, 95)],
@@ -207,33 +283,23 @@ class DatabaseSeeder extends Seeder
                 ['subject' => 'Bahasa Indonesia', 'score' => rand(72, 96)],
                 ['subject' => 'Bahasa Inggris', 'score' => rand(65, 93)],
             ];
-
             $avgScore = array_sum(array_column($subjects, 'score')) / count($subjects);
 
             Report::create([
                 'student_id' => $student->id,
-                'semester' => 'Ganjil',
-                'academic_year' => '2024/2025',
-                'grades' => $subjects,
-                'average_score' => round($avgScore, 2),
-                'rank' => $index + 1,
-                'published_at' => '2024-12-20',
+                'semester' => 'Ganjil', 'academic_year' => '2024/2025',
+                'grades' => $subjects, 'average_score' => round($avgScore, 2),
+                'rank' => $index + 1, 'published_at' => '2024-12-20',
             ]);
 
-            // Previous semester report
-            $subjects2 = array_map(function ($s) {
-                return ['subject' => $s['subject'], 'score' => rand(65, 98)];
-            }, $subjects);
+            $subjects2 = array_map(fn($s) => ['subject' => $s['subject'], 'score' => rand(65, 98)], $subjects);
             $avgScore2 = array_sum(array_column($subjects2, 'score')) / count($subjects2);
 
             Report::create([
                 'student_id' => $student->id,
-                'semester' => 'Genap',
-                'academic_year' => '2023/2024',
-                'grades' => $subjects2,
-                'average_score' => round($avgScore2, 2),
-                'rank' => rand(1, 10),
-                'published_at' => '2024-06-15',
+                'semester' => 'Genap', 'academic_year' => '2023/2024',
+                'grades' => $subjects2, 'average_score' => round($avgScore2, 2),
+                'rank' => rand(1, 10), 'published_at' => '2024-06-15',
             ]);
         }
 
@@ -247,7 +313,7 @@ class DatabaseSeeder extends Seeder
             ['title' => 'UAS Matematika', 'subject' => 'Matematika', 'exam_date' => '2024-12-14', 'status' => 'upcoming'],
         ];
 
-        $studentIds = Student::pluck('id')->toArray();
+        $studentIds = Student::whereNotNull('user_id')->pluck('id')->toArray();
 
         foreach ($examData as $ed) {
             $exam = Exam::create([
@@ -260,7 +326,6 @@ class DatabaseSeeder extends Seeder
                 'status' => $ed['status'],
             ]);
 
-            // Attach all students
             foreach ($studentIds as $sid) {
                 $pivotStatus = match ($ed['status']) {
                     'completed' => 'completed',

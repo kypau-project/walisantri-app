@@ -15,8 +15,10 @@ class User extends Authenticatable
         'name',
         'username',
         'email',
+        'phone',
         'password',
         'role',
+        'phone_verified_at',
     ];
 
     protected $hidden = [
@@ -28,6 +30,7 @@ class User extends Authenticatable
     {
         return [
             'email_verified_at' => 'datetime',
+            'phone_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
     }
@@ -35,6 +38,11 @@ class User extends Authenticatable
     public function student()
     {
         return $this->hasOne(Student::class);
+    }
+
+    public function otpVerifications()
+    {
+        return $this->hasMany(OtpVerification::class);
     }
 
     public function isAdmin(): bool
@@ -45,5 +53,10 @@ class User extends Authenticatable
     public function isWali(): bool
     {
         return $this->role === 'wali';
+    }
+
+    public function isVerified(): bool
+    {
+        return $this->phone_verified_at !== null;
     }
 }

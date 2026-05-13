@@ -14,11 +14,19 @@ Route::middleware('guest')->group(function () {
     Route::post('/register', [AuthController::class, 'register']);
 });
 
-// Authenticated routes (Wali Santri)
+// OTP verification (authenticated but not verified)
 Route::middleware('auth')->group(function () {
+    Route::get('/verify-otp', [AuthController::class, 'showVerifyOtp'])->name('verify-otp');
+    Route::post('/verify-otp', [AuthController::class, 'verifyOtp']);
+    Route::post('/resend-otp', [AuthController::class, 'resendOtp'])->name('resend-otp');
     Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+});
+
+// Authenticated + verified routes (Wali Santri)
+Route::middleware(['auth', \App\Http\Middleware\EnsurePhoneVerified::class])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/profile', [DashboardController::class, 'profile'])->name('profile');
+    Route::put('/profile/update', [DashboardController::class, 'updateProfile'])->name('profile.update');
     Route::get('/bills', [DashboardController::class, 'bills'])->name('bills');
     Route::post('/bills/pay', [DashboardController::class, 'payBill'])->name('bills.pay');
     Route::get('/payments', [DashboardController::class, 'payments'])->name('payments');

@@ -14,8 +14,17 @@ class LoginRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'username' => 'required|string',
+            'identifier' => 'required|string',
             'password' => 'required|string|min:6',
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'identifier.required' => 'Nama santri atau No. Induk wajib diisi.',
+            'password.required' => 'Password wajib diisi.',
+            'password.min' => 'Password minimal 6 karakter.',
         ];
     }
 }
