@@ -136,6 +136,7 @@ class DashboardController extends Controller
             'report' => $report,
         ]);
 
-        return $pdf->download("Raport_{$student->name}_{$report->semester}_{$report->academic_year}.pdf");
+        $filename = str_replace(['/', '\\'], '-', "Raport_{$student->name}_{$report->semester}_{$report->academic_year}.pdf");
+        return $pdf->download($filename);
     }
 }

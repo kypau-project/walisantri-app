@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ReportController;
 use App\Http\Controllers\Api\SavingController;
+use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
 // Public routes
@@ -44,4 +45,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Reports
     Route::get('/reports', [ReportController::class, 'index']);
     Route::get('/reports/download', [ReportController::class, 'download']);
+});
+
+// Admin routes
+Route::middleware(['auth:sanctum', \App\Http\Middleware\EnsureIsAdmin::class])->prefix('admin')->group(function () {
+    Route::get('/users', [UserController::class, 'index']);
+    Route::get('/users/{id}', [UserController::class, 'show']);
 });
