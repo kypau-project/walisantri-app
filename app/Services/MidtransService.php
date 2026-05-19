@@ -64,9 +64,11 @@ class MidtransService
     /**
      * Verifikasi signature notification dari Midtrans
      */
-    public function verifySignature(string $orderId, string $statusCode, string $grossAmount, string $signatureKey): bool
+    public function verifySignature(string $orderId, string $statusCode, $grossAmount, string $signatureKey): bool
     {
-        $expected = hash('sha512', $orderId . $statusCode . $grossAmount . $this->serverKey);
+        // Ensure gross_amount has 2 decimal places as required by Midtrans signature rules
+        $formattedAmount = number_format((float) $grossAmount, 2, '.', '');
+        $expected = hash('sha512', $orderId . $statusCode . $formattedAmount . $this->serverKey);
         return $expected === $signatureKey;
     }
 
