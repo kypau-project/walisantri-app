@@ -10,7 +10,6 @@ use App\Models\Saving;
 use App\Models\SavingTransaction;
 use App\Models\Student;
 use App\Models\User;
-use Faker\Factory as Faker;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -19,8 +18,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $faker = Faker::create('id_ID');
-
         // ===== ADMIN USER =====
         User::create([
             'name' => 'Administrator',
@@ -114,7 +111,7 @@ class DatabaseSeeder extends Seeder
                 'mother_name' => $data['mother_name'],
                 'barcode_id' => 'STD-' . strtoupper(Str::random(8)),
                 'status' => 'active',
-                'birth_date' => $faker->dateTimeBetween('2008-01-01', '2014-12-31'),
+                'birth_date' => '20' . rand(8, 13) . '-' . str_pad(rand(1, 12), 2, '0', STR_PAD_LEFT) . '-' . str_pad(rand(1, 28), 2, '0', STR_PAD_LEFT),
             ]);
         }
 
@@ -200,8 +197,8 @@ class DatabaseSeeder extends Seeder
                 'mother_phone' => $data['mother_phone'],
                 'barcode_id' => 'STD-' . strtoupper(Str::random(8)),
                 'status' => 'active',
-                'birth_date' => $faker->dateTimeBetween('2008-01-01', '2012-12-31'),
-                'address' => $faker->address(),
+                'birth_date' => '20' . rand(8, 12) . '-' . str_pad(rand(1, 12), 2, '0', STR_PAD_LEFT) . '-' . str_pad(rand(1, 28), 2, '0', STR_PAD_LEFT),
+                'address' => 'Jl. Pesantren No. ' . ($index + 1) . ', Kota Bandung',
             ]);
 
             $savingBalance = rand(50000, 500000);
@@ -218,7 +215,7 @@ class DatabaseSeeder extends Seeder
                     'description' => 'Top up saldo tabungan',
                     'transaction_id' => 'SAV-' . strtoupper(Str::random(10)),
                     'balance_after' => $runningBalance,
-                    'created_at' => $faker->dateTimeBetween('-6 months', 'now'),
+                    'created_at' => now()->subDays(rand(1, 180)),
                 ]);
             }
             $saving->update(['balance' => $runningBalance]);
