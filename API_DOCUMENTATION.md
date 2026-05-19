@@ -621,8 +621,8 @@ Saldo tabungan santri.
 }
 ```
 
-### POST `/savings/topup`
-Top up saldo tabungan.
+### POST `/savings/topup` ⭐ Midtrans Integration
+Top up saldo tabungan melalui Midtrans. Mengembalikan `snap_token` dan `redirect_url`.
 
 **Headers:** `Authorization: Bearer {token}`
 
@@ -633,6 +633,32 @@ Top up saldo tabungan.
   "description": "Uang saku mingguan"
 }
 ```
+
+**Response 200:**
+```json
+{
+  "success": true,
+  "message": "Token pembayaran berhasil dibuat.",
+  "data": {
+    "snap_token": "8ea3f2b1-5a2a-4c2...",
+    "redirect_url": "https://app.sandbox.midtrans.com/snap/v3/redirection/8ea3f2b1...",
+    "order_id": "SAV-13-1716123456-ABCD",
+    "transaction": {
+      "id": 1,
+      "type": "topup",
+      "amount": 50000,
+      "description": "Uang saku mingguan",
+      "transaction_id": "SAV-13-1716123456-ABCD",
+      "balance_after": 473673,
+      "status": "pending",
+      "created_at": "2024-05-19 14:00"
+    }
+  }
+}
+```
+
+> ⚠️ **Catatan Flow Flutter:**
+> Flow pembayaran tabungan persis sama dengan tagihan (bills). Buka `redirect_url` di WebView dan tunggu return ke `/midtrans/finish`. Saldo tabungan (balance) akan bertambah secara otomatis di *background* melalui webhook Midtrans saat pembayaran `success`.
 
 ### GET `/savings/history`
 Riwayat transaksi tabungan (paginated).

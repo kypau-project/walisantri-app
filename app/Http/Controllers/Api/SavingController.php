@@ -33,9 +33,6 @@ class SavingController extends Controller
         ]);
     }
 
-    /**
-     * Top up savings
-     */
     public function topup(Request $request): JsonResponse
     {
         $request->validate([
@@ -44,29 +41,54 @@ class SavingController extends Controller
         ]);
 
         $student = $request->user()->student;
-        $saving = $student->savingAccount;
+        $saving = $student->savingAccount ?? $student->savingAccount()->create(['balance' => 0]);
 
-        if (!$saving) {
-            $saving = $student->savingAccount()->create(['balance' => 0]);
-        }
-
-        $saving->balance += $request->amount;
-        $saving->save();
+        $amount = (int) $request->amount;
+        $description = $request->description ?? 'Top up saldo';
+        $orderId = 'SAV-' . $student->id . '-' . time() . '-' . strtoupper(Str::random(4));
 
         $transaction = SavingTransaction::create([
             'saving_id' => $saving->id,
             'type' => 'topup',
-            'amount' => $request->amount,
-            'description' => $request->description ?? 'Top up saldo',
-            'transaction_id' => 'SAV-' . strtoupper(Str::random(10)),
+            'amount' => $amount,
+            'description' => $description,
+            'transaction_id' => $orderId,
             'balance_after' => $saving->balance,
+            'status' => 'pending',
         ]);
+
+        $midtrans = new \App\Services\MidtransService();
+        $params = $midtrans->buildTransactionParams(
+            $orderId,
+            $amount,
+            [
+                'name' => $student->name,
+                'phone' => $student->father_phone ?? $student->mother_phone ?? '',
+            ],
+            [
+                [
+                    'id' => 'TOPUP-' . $saving->id,
+                    'price' => $amount,
+                    'quantity' => 1,
+                    'name' => Str::limit($description, 50),
+                ],
+            ]
+        );
+
+        $result = $midtrans->createTransaction($params);
+
+        if (!$result || empty($result['token'])) {
+            $transaction->update(['status' => 'failed']);
+            return response()->json(['success' => false, 'message' => 'Gagal membuat token pembayaran.'], 500);
+        }
 
         return response()->json([
             'success' => true,
-            'message' => 'Top up berhasil.',
+            'message' => 'Token pembayaran berhasil dibuat.',
             'data' => [
-                'saving' => new SavingResource($saving),
+                'snap_token' => $result['token'],
+                'redirect_url' => $result['redirect_url'],
+                'order_id' => $orderId,
                 'transaction' => new SavingTransactionResource($transaction),
             ],
         ]);
