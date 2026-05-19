@@ -102,6 +102,9 @@ class MidtransService
                 'first_name' => $customer['name'] ?? 'Wali Santri',
                 'phone' => $customer['phone'] ?? '',
             ],
+            'callbacks' => [
+                'finish' => url('/midtrans/finish'),
+            ],
             'enabled_payments' => [
                 // Kartu Debit/Credit
                 'credit_card',
