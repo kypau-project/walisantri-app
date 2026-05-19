@@ -200,12 +200,12 @@ async function processPayment() {
     const loading = document.getElementById('payLoading');
 
     if (!amount || amount < 1000) {
-        alert('Jumlah minimum pembayaran Rp 1.000');
+        Swal.fire({ icon: 'warning', title: 'Jumlah Tidak Valid', text: 'Jumlah minimum pembayaran Rp 1.000', confirmButtonColor: '#0D9488' });
         return;
     }
 
     if (amount > currentRemaining) {
-        alert('Jumlah melebihi sisa tagihan.');
+        Swal.fire({ icon: 'warning', title: 'Melebihi Sisa Tagihan', text: 'Jumlah yang dimasukkan melebihi sisa tagihan.', confirmButtonColor: '#0D9488' });
         return;
     }
 
@@ -231,7 +231,7 @@ async function processPayment() {
 
         if (!data.success) {
             loading.style.display = 'none';
-            alert(data.message || 'Gagal membuat pembayaran.');
+            Swal.fire({ icon: 'error', title: 'Gagal', text: data.message || 'Gagal membuat pembayaran.', confirmButtonColor: '#0D9488' });
             return;
         }
 
@@ -240,13 +240,19 @@ async function processPayment() {
 
         window.snap.pay(data.data.snap_token, {
             onSuccess: function(result) {
-                window.location.href = '/bills?status=success';
+                Swal.fire({ icon: 'success', title: 'Pembayaran Berhasil!', text: 'Terima kasih. Tagihan akan diperbarui otomatis.', confirmButtonColor: '#0D9488' }).then(() => {
+                    window.location.href = '/bills';
+                });
             },
             onPending: function(result) {
-                window.location.href = '/bills?status=pending';
+                Swal.fire({ icon: 'info', title: 'Menunggu Pembayaran', text: 'Silakan selesaikan pembayaran Anda. Status akan diperbarui otomatis.', confirmButtonColor: '#0D9488' }).then(() => {
+                    window.location.href = '/bills';
+                });
             },
             onError: function(result) {
-                window.location.href = '/bills?status=error';
+                Swal.fire({ icon: 'error', title: 'Pembayaran Gagal', text: 'Terjadi kesalahan saat memproses pembayaran.', confirmButtonColor: '#0D9488' }).then(() => {
+                    window.location.href = '/bills';
+                });
             },
             onClose: function() {
                 window.location.reload();
@@ -256,8 +262,22 @@ async function processPayment() {
     } catch (err) {
         loading.style.display = 'none';
         console.error(err);
-        alert('Terjadi kesalahan. Silakan coba lagi.');
+        Swal.fire({ icon: 'error', title: 'Terjadi Kesalahan', text: 'Silakan coba lagi.', confirmButtonColor: '#0D9488' });
     }
+}
+
+// Show status alerts on page load (from redirect)
+const urlParams = new URLSearchParams(window.location.search);
+const status = urlParams.get('status');
+if (status === 'success') {
+    Swal.fire({ icon: 'success', title: 'Pembayaran Berhasil!', text: 'Terima kasih, tagihan akan diperbarui otomatis.', confirmButtonColor: '#0D9488' });
+    history.replaceState(null, '', '/bills');
+} else if (status === 'pending') {
+    Swal.fire({ icon: 'info', title: 'Menunggu Pembayaran', text: 'Selesaikan pembayaran Anda. Status akan diperbarui secara otomatis.', confirmButtonColor: '#0D9488' });
+    history.replaceState(null, '', '/bills');
+} else if (status === 'error') {
+    Swal.fire({ icon: 'error', title: 'Pembayaran Gagal', text: 'Terjadi kesalahan. Silakan coba lagi.', confirmButtonColor: '#0D9488' });
+    history.replaceState(null, '', '/bills');
 }
 </script>
 @endsection

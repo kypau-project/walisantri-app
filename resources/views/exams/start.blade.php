@@ -50,12 +50,42 @@
             </ul>
         </div>
 
-        <form method="POST" action="/exams/{{ $exam->id }}/begin">
+        <form method="POST" action="/exams/{{ $exam->id }}/begin" id="beginExamForm">
             @csrf
-            <button type="submit" class="btn btn-primary btn-lg btn-block" onclick="return confirm('Mulai ujian sekarang? Waktu akan langsung berjalan.')">
+            <button type="button" class="btn btn-primary btn-lg btn-block" id="startExamBtn">
                 <i class="fas fa-play-circle"></i> Mulai Mengerjakan
             </button>
         </form>
     </div>
 </div>
+@endsection
+
+@section('scripts')
+<script>
+document.getElementById('startExamBtn').addEventListener('click', function() {
+    Swal.fire({
+        title: 'Mulai Ujian Sekarang?',
+        html: '<p style="color:#64748B;font-size:14px;">Waktu akan langsung berjalan setelah Anda memulai dan <strong>tidak bisa dihentikan</strong>.</p>',
+        icon: 'question',
+        showCancelButton: true,
+        confirmButtonColor: '#0D9488',
+        cancelButtonColor: '#94A3B8',
+        confirmButtonText: '<i class="fas fa-play"></i> Ya, Mulai!',
+        cancelButtonText: 'Batal',
+        reverseButtons: true,
+    }).then((result) => {
+        if (result.isConfirmed) {
+            Swal.fire({
+                title: 'Mempersiapkan Ujian...',
+                text: 'Mohon tunggu sebentar.',
+                allowOutsideClick: false,
+                allowEscapeKey: false,
+                showConfirmButton: false,
+                didOpen: () => Swal.showLoading(),
+            });
+            document.getElementById('beginExamForm').submit();
+        }
+    });
+});
+</script>
 @endsection
