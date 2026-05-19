@@ -40,6 +40,7 @@ Route::middleware(['auth', \App\Http\Middleware\EnsurePhoneVerified::class])->gr
     Route::get('/bills', [DashboardController::class, 'bills'])->name('bills');
     Route::post('/bills/pay', [DashboardController::class, 'payBill'])->name('bills.pay');
     Route::post('/midtrans/snap-token', [MidtransController::class, 'createSnapToken'])->name('midtrans.snap-token');
+    Route::post('/midtrans/saving-snap-token', [MidtransController::class, 'createSavingSnapToken'])->name('midtrans.saving-snap-token');
     Route::get('/payments', [DashboardController::class, 'payments'])->name('payments');
     Route::get('/savings', [DashboardController::class, 'savings'])->name('savings');
     Route::post('/savings/topup', [DashboardController::class, 'topupSaving'])->name('savings.topup');

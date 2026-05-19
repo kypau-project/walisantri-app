@@ -16,6 +16,7 @@ class SavingTransaction extends Model
         'description',
         'transaction_id',
         'balance_after',
+        'status',
     ];
 
     protected function casts(): array
@@ -24,6 +25,11 @@ class SavingTransaction extends Model
             'amount' => 'decimal:2',
             'balance_after' => 'decimal:2',
         ];
+    }
+
+    public function saving()
+    {
+        return $this->belongsTo(Saving::class, 'saving_id');
     }
 
     public function savingAccount()

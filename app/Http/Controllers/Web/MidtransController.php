@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Web;
 use App\Http\Controllers\Controller;
 use App\Models\Bill;
 use App\Models\Payment;
+use App\Models\Saving;
+use App\Models\SavingTransaction;
 use App\Services\MidtransService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
@@ -84,6 +86,70 @@ class MidtransController extends Controller
     }
 
     /**
+     * Create Snap Token untuk top-up tabungan
+     */
+    public function createSavingSnapToken(Request $request)
+    {
+        $request->validate([
+            'amount' => 'required|numeric|min:1000',
+        ]);
+
+        $student = $request->user()->student;
+        $amount = (int) $request->amount;
+        $description = $request->description ?? 'Top up saldo tabungan';
+
+        // Ensure saving account exists
+        $saving = $student->savingAccount ?? $student->savingAccount()->create(['balance' => 0]);
+
+        // Generate unique order ID with SAV prefix
+        $orderId = 'SAV-' . $student->id . '-' . time() . '-' . strtoupper(Str::random(4));
+
+        // Create pending saving transaction
+        $transaction = $saving->transactions()->create([
+            'type' => 'topup',
+            'amount' => $amount,
+            'description' => $description,
+            'transaction_id' => $orderId,
+            'balance_after' => $saving->balance, // will be updated after payment
+            'status' => 'pending',
+        ]);
+
+        // Build Midtrans params
+        $midtrans = new MidtransService();
+        $params = $midtrans->buildTransactionParams(
+            $orderId,
+            $amount,
+            [
+                'name' => $student->name,
+                'phone' => $student->father_phone ?? $student->mother_phone ?? '',
+            ],
+            [
+                [
+                    'id' => 'TOPUP-' . $saving->id,
+                    'price' => $amount,
+                    'quantity' => 1,
+                    'name' => Str::limit($description, 50),
+                ],
+            ]
+        );
+
+        $snapToken = $midtrans->createSnapToken($params);
+
+        if (!$snapToken) {
+            $transaction->update(['status' => 'failed']);
+            return response()->json(['success' => false, 'message' => 'Gagal membuat token pembayaran.'], 500);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'snap_token' => $snapToken,
+                'order_id' => $orderId,
+            ],
+        ]);
+    }
+
+    /**
      * Webhook / Notification handler dari Midtrans
      * URL: POST /midtrans/notification
      */
@@ -112,7 +178,12 @@ class MidtransController extends Controller
             return response()->json(['message' => 'Invalid signature'], 403);
         }
 
-        // Find payment
+        // Route to savings handler if order starts with SAV-
+        if (str_starts_with($orderId, 'SAV-')) {
+            return $this->handleSavingNotification($payload, $orderId, $transactionStatus, $fraudStatus);
+        }
+
+        // Find payment (for bill payments)
         $payment = Payment::where('transaction_id', $orderId)->first();
         if (!$payment) {
             Log::warning('Midtrans Payment Not Found', ['order_id' => $orderId]);
@@ -178,11 +249,56 @@ class MidtransController extends Controller
     }
 
     /**
+     * Handle Midtrans notification for savings top-up (SAV- prefix)
+     */
+    private function handleSavingNotification(array $payload, string $orderId, string $transactionStatus, string $fraudStatus)
+    {
+        $transaction = SavingTransaction::where('transaction_id', $orderId)->first();
+
+        if (!$transaction) {
+            Log::warning('Midtrans Saving Transaction Not Found', ['order_id' => $orderId]);
+            return response()->json(['message' => 'Transaction not found'], 404);
+        }
+
+        if ($transaction->status === 'success') {
+            return response()->json(['message' => 'Already processed']);
+        }
+
+        if (($transactionStatus === 'capture' || $transactionStatus === 'settlement') && $fraudStatus === 'accept') {
+            // Credit the savings balance
+            $saving = $transaction->saving;
+            $saving->balance += $transaction->amount;
+            $saving->save();
+
+            $transaction->update([
+                'status' => 'success',
+                'balance_after' => $saving->balance,
+            ]);
+
+            Log::info("Saving Top Up SUCCESS: {$orderId}, Amount: {$transaction->amount}");
+        } elseif (in_array($transactionStatus, ['deny', 'cancel', 'failure', 'expire'])) {
+            $transaction->update(['status' => 'failed']);
+        }
+
+        return response()->json(['message' => 'OK']);
+    }
+
+    /**
      * Callback setelah user selesai di Snap (redirect dari finish URL)
      */
     public function finish(Request $request)
     {
         $orderId = $request->query('order_id');
+
+        // Determine redirect based on order type
+        if ($orderId && str_starts_with($orderId, 'SAV-')) {
+            $tx = SavingTransaction::where('transaction_id', $orderId)->first();
+            if ($tx && $tx->status === 'success') {
+                return redirect('/savings')->with('success', 'Top up berhasil! Saldo tabungan telah ditambahkan.');
+            }
+            return redirect('/savings')->with('info', 'Top up sedang diproses. Saldo akan diperbarui otomatis.');
+        }
+
         $payment = $orderId ? Payment::where('transaction_id', $orderId)->first() : null;
 
         if ($payment && $payment->status === 'success') {
