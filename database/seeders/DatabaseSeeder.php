@@ -303,43 +303,90 @@ class DatabaseSeeder extends Seeder
             ]);
         }
 
-        // ===== EXAMS =====
-        $examData = [
-            ['title' => 'UTS Al-Quran', 'subject' => 'Al-Quran', 'exam_date' => '2024-10-15', 'status' => 'completed'],
-            ['title' => 'UTS Fiqih', 'subject' => 'Fiqih', 'exam_date' => '2024-10-16', 'status' => 'completed'],
-            ['title' => 'UTS Matematika', 'subject' => 'Matematika', 'exam_date' => '2024-10-17', 'status' => 'completed'],
-            ['title' => 'UAS Al-Quran', 'subject' => 'Al-Quran', 'exam_date' => '2024-12-10', 'status' => 'active'],
-            ['title' => 'UAS Bahasa Arab', 'subject' => 'Bahasa Arab', 'exam_date' => '2024-12-12', 'status' => 'upcoming'],
-            ['title' => 'UAS Matematika', 'subject' => 'Matematika', 'exam_date' => '2024-12-14', 'status' => 'upcoming'],
-        ];
-
+        // ===== EXAMS WITH QUESTIONS =====
         $studentIds = Student::whereNotNull('user_id')->pluck('id')->toArray();
 
-        foreach ($examData as $ed) {
-            $exam = Exam::create([
-                'title' => $ed['title'],
-                'description' => 'Ujian ' . $ed['title'],
-                'subject' => $ed['subject'],
-                'exam_date' => $ed['exam_date'],
-                'duration_minutes' => 90,
-                'exam_url' => 'https://exam.uqi.ac.id/start',
-                'status' => $ed['status'],
+        // Exam 1: Completed (with questions + answers)
+        $exam1 = Exam::create([
+            'title' => 'UTS Al-Quran Semester Ganjil',
+            'description' => 'Ujian Tengah Semester mata pelajaran Al-Quran. Kerjakan dengan jujur.',
+            'subject' => 'Al-Quran',
+            'teacher_name' => 'Ustadz Ahmad Fauzi',
+            'exam_date' => '2024-10-15',
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'duration_minutes' => 90,
+            'shuffle_questions' => false,
+            'show_result' => true,
+            'status' => 'completed',
+        ]);
+
+        $q1 = \App\Models\ExamQuestion::create(['exam_id' => $exam1->id, 'question_text' => 'Surah Al-Fatihah terdiri dari berapa ayat?', 'question_type' => 'multiple_choice', 'options' => [['key'=>'A','text'=>'5 ayat'],['key'=>'B','text'=>'6 ayat'],['key'=>'C','text'=>'7 ayat'],['key'=>'D','text'=>'8 ayat']], 'correct_answer' => 'C', 'points' => 10, 'sort_order' => 1]);
+        $q2 = \App\Models\ExamQuestion::create(['exam_id' => $exam1->id, 'question_text' => 'Apa arti dari "Bismillahirrahmanirrahim"?', 'question_type' => 'multiple_choice', 'options' => [['key'=>'A','text'=>'Segala puji bagi Allah'],['key'=>'B','text'=>'Dengan menyebut nama Allah Yang Maha Pengasih lagi Maha Penyayang'],['key'=>'C','text'=>'Raja di hari pembalasan'],['key'=>'D','text'=>'Hanya kepada-Mu kami menyembah']], 'correct_answer' => 'B', 'points' => 10, 'sort_order' => 2]);
+        $q3 = \App\Models\ExamQuestion::create(['exam_id' => $exam1->id, 'question_text' => 'Jelaskan keutamaan membaca Surah Al-Fatihah dalam shalat!', 'question_type' => 'essay', 'correct_answer' => 'Al-Fatihah wajib dibaca dalam setiap rakaat shalat karena merupakan rukun shalat.', 'points' => 20, 'sort_order' => 3]);
+
+        foreach ($studentIds as $sid) {
+            $exam1->students()->attach($sid, [
+                'access_token' => Str::random(48),
+                'status' => 'completed',
+                'score' => rand(60, 100),
+                'total_points' => rand(25, 40),
+                'started_at' => '2024-10-15 08:05:00',
+                'finished_at' => '2024-10-15 09:15:00',
             ]);
 
-            foreach ($studentIds as $sid) {
-                $pivotStatus = match ($ed['status']) {
-                    'completed' => 'completed',
-                    'active' => ['not_started', 'in_progress'][rand(0, 1)],
-                    default => 'not_started',
-                };
+            // Create answers
+            \App\Models\ExamAnswer::create(['exam_id'=>$exam1->id, 'student_id'=>$sid, 'exam_question_id'=>$q1->id, 'answer_text'=>'C', 'is_correct'=>true, 'points_earned'=>10]);
+            \App\Models\ExamAnswer::create(['exam_id'=>$exam1->id, 'student_id'=>$sid, 'exam_question_id'=>$q2->id, 'answer_text'=>'B', 'is_correct'=>true, 'points_earned'=>10]);
+            \App\Models\ExamAnswer::create(['exam_id'=>$exam1->id, 'student_id'=>$sid, 'exam_question_id'=>$q3->id, 'answer_text'=>'Al-Fatihah wajib dibaca karena merupakan rukun shalat.', 'is_correct'=>null, 'points_earned'=>15]);
+        }
 
-                $exam->students()->attach($sid, [
-                    'status' => $pivotStatus,
-                    'score' => $pivotStatus === 'completed' ? rand(60, 100) : null,
-                    'started_at' => $pivotStatus !== 'not_started' ? $ed['exam_date'] . ' 08:00:00' : null,
-                    'finished_at' => $pivotStatus === 'completed' ? $ed['exam_date'] . ' 09:30:00' : null,
-                ]);
-            }
+        // Exam 2: Active (today, can be taken)
+        $exam2 = Exam::create([
+            'title' => 'UAS Fiqih',
+            'description' => 'Ujian Akhir Semester Fiqih. Dilarang membuka buku.',
+            'subject' => 'Fiqih',
+            'teacher_name' => 'Ustadzah Maryam',
+            'exam_date' => now()->format('Y-m-d'),
+            'start_time' => '00:00',
+            'end_time' => '23:59',
+            'duration_minutes' => 60,
+            'shuffle_questions' => true,
+            'show_result' => true,
+            'status' => 'active',
+        ]);
+
+        \App\Models\ExamQuestion::create(['exam_id'=>$exam2->id, 'question_text'=>'Berapa jumlah rukun Islam?', 'question_type'=>'multiple_choice', 'options'=>[['key'=>'A','text'=>'3'],['key'=>'B','text'=>'4'],['key'=>'C','text'=>'5'],['key'=>'D','text'=>'6']], 'correct_answer'=>'C', 'points'=>10, 'sort_order'=>1]);
+        \App\Models\ExamQuestion::create(['exam_id'=>$exam2->id, 'question_text'=>'Shalat wajib yang dilakukan 5 waktu disebut?', 'question_type'=>'multiple_choice', 'options'=>[['key'=>'A','text'=>'Shalat Sunnah'],['key'=>'B','text'=>'Shalat Fardhu'],['key'=>'C','text'=>'Shalat Dhuha'],['key'=>'D','text'=>'Shalat Tahajud']], 'correct_answer'=>'B', 'points'=>10, 'sort_order'=>2]);
+        \App\Models\ExamQuestion::create(['exam_id'=>$exam2->id, 'question_text'=>'Sebutkan syarat-syarat sah shalat!', 'question_type'=>'essay', 'correct_answer'=>'Islam, baligh, berakal, suci dari hadas, menghadap kiblat, masuk waktu shalat, menutup aurat.', 'points'=>20, 'sort_order'=>3]);
+        \App\Models\ExamQuestion::create(['exam_id'=>$exam2->id, 'question_text'=>'Apa yang membatalkan wudhu?', 'question_type'=>'multiple_choice', 'options'=>[['key'=>'A','text'=>'Makan'],['key'=>'B','text'=>'Tidur nyenyak'],['key'=>'C','text'=>'Minum air'],['key'=>'D','text'=>'Berjalan']], 'correct_answer'=>'B', 'points'=>10, 'sort_order'=>4]);
+        \App\Models\ExamQuestion::create(['exam_id'=>$exam2->id, 'question_text'=>'Jelaskan perbedaan antara shalat fardhu dan shalat sunnah!', 'question_type'=>'essay', 'correct_answer'=>'Shalat fardhu hukumnya wajib dan berdosa jika ditinggalkan. Shalat sunnah hukumnya tidak wajib.', 'points'=>20, 'sort_order'=>5]);
+
+        foreach ($studentIds as $sid) {
+            $exam2->students()->attach($sid, [
+                'access_token' => Str::random(48),
+                'status' => 'not_started',
+            ]);
+        }
+
+        // Exam 3: Draft
+        $exam3 = Exam::create([
+            'title' => 'UAS Matematika',
+            'description' => 'Ujian Akhir Semester Matematika.',
+            'subject' => 'Matematika',
+            'teacher_name' => 'Ustadz Haikal',
+            'exam_date' => now()->addDays(7)->format('Y-m-d'),
+            'duration_minutes' => 90,
+            'status' => 'draft',
+        ]);
+
+        \App\Models\ExamQuestion::create(['exam_id'=>$exam3->id, 'question_text'=>'Berapakah hasil dari 15 x 12?', 'question_type'=>'multiple_choice', 'options'=>[['key'=>'A','text'=>'170'],['key'=>'B','text'=>'180'],['key'=>'C','text'=>'190'],['key'=>'D','text'=>'200']], 'correct_answer'=>'B', 'points'=>10, 'sort_order'=>1]);
+
+        foreach ($studentIds as $sid) {
+            $exam3->students()->attach($sid, [
+                'access_token' => Str::random(48),
+                'status' => 'not_started',
+            ]);
         }
     }
 }

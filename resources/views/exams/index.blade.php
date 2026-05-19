@@ -6,95 +6,94 @@
     <div class="page-header-inner">
         <a href="/dashboard" class="back-btn"><i class="fas fa-arrow-left"></i></a>
         <div>
-            <h2>📝 Ujian Online</h2>
-            <p>Daftar ujian santri</p>
+            <h2>Ujian Online</h2>
+            <p>Daftar ujian yang tersedia</p>
         </div>
     </div>
 </div>
 
 <div class="app-content fade-in">
-    @if($exams->count() > 0)
+    @if (session('success'))
+    <div class="alert alert-success"><i class="fas fa-check-circle"></i> {{ session('success') }}</div>
+    @endif
+    @if (session('error'))
+    <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> {{ session('error') }}</div>
+    @endif
 
-    @php
-        $activeExams = $exams->whereIn('status', ['active', 'upcoming']);
-        $completedExams = $exams->where('status', 'completed');
-    @endphp
-
-    <!-- Active / Upcoming Exams -->
-    @if($activeExams->count() > 0)
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Ujian Mendatang</h3>
-            <span class="badge badge-warning">{{ $activeExams->count() }} ujian</span>
-        </div>
-
-        @foreach($activeExams as $exam)
-        <div class="list-item" style="flex-wrap:wrap;">
-            <div class="list-icon" style="background:{{ $exam->status === 'active' ? '#DCFCE7' : '#DBEAFE' }};color:{{ $exam->status === 'active' ? '#15803D' : '#2563EB' }};">
-                <i class="fas fa-{{ $exam->status === 'active' ? 'play-circle' : 'calendar' }}"></i>
-            </div>
-            <div class="list-content">
-                <h4>{{ $exam->title }}</h4>
-                <p>
-                    {{ $exam->subject }} · {{ $exam->duration_minutes }} menit
-                    <br>
-                    <span class="badge badge-{{ $exam->status === 'active' ? 'success' : 'info' }}">
-                        {{ $exam->status === 'active' ? '🟢 Sedang Berlangsung' : '📅 ' . $exam->exam_date->format('d M Y') }}
+    @forelse($exams as $exam)
+    <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+            <div style="flex:1;">
+                <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;">
+                    @php
+                    $labelColors = [
+                        'tersedia' => 'info',
+                        'selesai' => 'success',
+                        'terkunci' => 'secondary',
+                        'terlewat' => 'danger',
+                    ];
+                    $labelIcons = [
+                        'tersedia' => 'fa-unlock',
+                        'selesai' => 'fa-check-circle',
+                        'terkunci' => 'fa-lock',
+                        'terlewat' => 'fa-times-circle',
+                    ];
+                    $labelTexts = [
+                        'tersedia' => 'Tersedia',
+                        'selesai' => 'Selesai',
+                        'terkunci' => 'Terkunci',
+                        'terlewat' => 'Terlewat',
+                    ];
+                    @endphp
+                    <span class="badge badge-{{ $labelColors[$exam->display_label] ?? 'info' }}">
+                        <i class="fas {{ $labelIcons[$exam->display_label] ?? 'fa-info' }}"></i>
+                        {{ $labelTexts[$exam->display_label] ?? $exam->display_label }}
                     </span>
+                </div>
+                <h4 style="font-weight:700;margin-bottom:4px;">{{ $exam->title }}</h4>
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:4px;">
+                    <i class="fas fa-book" style="width:16px;"></i> {{ $exam->subject }}
+                    @if($exam->teacher_name) · <i class="fas fa-user-tie"></i> {{ $exam->teacher_name }} @endif
+                </p>
+                <p style="font-size:12px;color:var(--text-muted);">
+                    <i class="fas fa-calendar"></i> {{ $exam->exam_date->format('d M Y') }}
+                    @if($exam->start_time) · {{ $exam->start_time }} — {{ $exam->end_time }} @endif
+                    · <i class="fas fa-clock"></i> {{ $exam->duration_minutes }} menit
+                    · {{ $exam->questions_count }} soal
                 </p>
             </div>
-            <div style="width:100%;margin-top:10px;padding-left:58px;">
-                @if($exam->status === 'active' && $exam->pivot->status !== 'completed')
-                <a href="{{ $exam->exam_url ?? '#' }}" target="_blank" class="btn btn-primary btn-sm btn-block" id="start-exam-{{ $exam->id }}">
-                    <i class="fas fa-external-link-alt"></i> Mulai Ujian
-                </a>
-                @elseif($exam->pivot->status === 'completed')
-                <div style="text-align:center;">
-                    <span class="badge badge-success"><i class="fas fa-check"></i> Selesai — Nilai: {{ $exam->pivot->score }}</span>
-                </div>
-                @else
-                <span style="font-size:12px;color:var(--text-muted);">Ujian belum dimulai</span>
+            <div style="text-align:right;flex-shrink:0;margin-left:12px;">
+                @if($exam->display_label === 'tersedia')
+                    @if($exam->pivot->status === 'in_progress')
+                    <a href="/exams/{{ $exam->id }}/take" class="btn btn-primary btn-sm">
+                        <i class="fas fa-play"></i> Lanjutkan
+                    </a>
+                    @else
+                    <a href="/exams/{{ $exam->id }}/start" class="btn btn-primary btn-sm">
+                        <i class="fas fa-play"></i> Mulai
+                    </a>
+                    @endif
+                @elseif($exam->display_label === 'selesai')
+                    <div style="margin-bottom:6px;">
+                        <span style="font-size:28px;font-weight:800;color:{{ $exam->pivot->score >= 70 ? 'var(--success)' : 'var(--danger)' }};">
+                            {{ $exam->pivot->score }}
+                        </span>
+                    </div>
+                    @if($exam->show_result)
+                    <a href="/exams/{{ $exam->id }}/result" class="btn btn-secondary btn-sm">
+                        <i class="fas fa-eye"></i> Lihat
+                    </a>
+                    @endif
                 @endif
             </div>
         </div>
-        @endforeach
     </div>
-    @endif
-
-    <!-- Completed Exams -->
-    @if($completedExams->count() > 0)
-    <div class="card">
-        <div class="card-header">
-            <h3 class="card-title">Ujian Selesai</h3>
-            <span class="badge badge-secondary">{{ $completedExams->count() }} ujian</span>
-        </div>
-
-        @foreach($completedExams as $exam)
-        <div class="list-item">
-            <div class="list-icon" style="background:#F1F5F9;color:#64748B;">
-                <i class="fas fa-check-double"></i>
-            </div>
-            <div class="list-content">
-                <h4>{{ $exam->title }}</h4>
-                <p>{{ $exam->subject }} · {{ $exam->exam_date->format('d M Y') }}</p>
-            </div>
-            <div class="list-amount">
-                <div class="amount" style="color:{{ ($exam->pivot->score ?? 0) >= 75 ? 'var(--success)' : 'var(--danger)' }};">
-                    {{ $exam->pivot->score ?? '-' }}
-                </div>
-                <div class="date">Nilai</div>
-            </div>
-        </div>
-        @endforeach
-    </div>
-    @endif
-
-    @else
+    @empty
     <div class="empty-state">
-        <i class="fas fa-pencil-alt"></i>
-        <h3>Tidak Ada Ujian</h3>
-        <p>Belum ada ujian yang dijadwalkan.</p>
+        <i class="fas fa-clipboard-list"></i>
+        <h3>Belum Ada Ujian</h3>
+        <p>Saat ini tidak ada ujian yang tersedia.</p>
     </div>
-    @endif
+    @endforelse
 </div>
 @endsection

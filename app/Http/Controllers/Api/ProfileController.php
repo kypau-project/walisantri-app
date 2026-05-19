@@ -92,4 +92,40 @@ class ProfileController extends Controller
             ],
         ]);
     }
+    /**
+     * Upload / update student photo
+     */
+    public function uploadPhoto(Request $request): JsonResponse
+    {
+        $request->validate([
+            'photo' => 'required|image|mimes:jpeg,jpg,png,webp|max:2048',
+        ]);
+
+        $student = $request->user()->student;
+
+        if (!$student) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Data santri tidak ditemukan.',
+            ], 404);
+        }
+
+        // Delete old photo
+        if ($student->photo && Storage::disk('public')->exists($student->photo)) {
+            Storage::disk('public')->delete($student->photo);
+        }
+
+        // Save new photo
+        $path = $request->file('photo')->store('photos/students', 'public');
+        $student->update(['photo' => $path]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Foto berhasil diupload.',
+            'data' => [
+                'photo_path' => $path,
+                'photo_url' => asset('storage/' . $path),
+            ],
+        ]);
+    }
 }

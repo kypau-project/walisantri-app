@@ -36,14 +36,13 @@ class BillController extends Controller
     }
 
     /**
-     * Pay a bill
+     * Create Midtrans Snap Token for bill payment (untuk Flutter)
      */
     public function pay(Request $request): JsonResponse
     {
         $request->validate([
             'bill_id' => 'required|exists:bills,id',
             'amount' => 'required|numeric|min:1000',
-            'payment_method' => 'nullable|string|in:transfer,cash,ewallet',
         ]);
 
         $student = $request->user()->student;
@@ -60,34 +59,118 @@ class BillController extends Controller
         }
 
         $remaining = $bill->amount - $bill->paid_amount;
-        $payAmount = min($request->amount, $remaining);
+        $payAmount = (int) min($request->amount, $remaining);
 
-        // Create payment record
+        $orderId = 'WS-' . $bill->id . '-' . time() . '-' . strtoupper(Str::random(4));
+
+        // Create pending payment
         $payment = Payment::create([
             'student_id' => $student->id,
             'bill_id' => $bill->id,
             'amount' => $payAmount,
-            'payment_method' => $request->payment_method ?? 'transfer',
-            'transaction_id' => 'TRX-' . strtoupper(Str::random(12)),
-            'status' => 'success',
-            'paid_at' => now(),
+            'payment_method' => 'midtrans',
+            'transaction_id' => $orderId,
+            'status' => 'pending',
         ]);
 
-        // Update bill
-        $bill->paid_amount += $payAmount;
-        if ($bill->paid_amount >= $bill->amount) {
-            $bill->status = 'paid';
-        } else {
-            $bill->status = 'partial';
+        // Create Snap token
+        $midtrans = new \App\Services\MidtransService();
+        $params = $midtrans->buildTransactionParams(
+            $orderId,
+            $payAmount,
+            [
+                'name' => $student->name,
+                'phone' => $student->father_phone ?? $student->mother_phone ?? '',
+            ],
+            [
+                [
+                    'id' => 'BILL-' . $bill->id,
+                    'price' => $payAmount,
+                    'quantity' => 1,
+                    'name' => Str::limit($bill->title, 50),
+                ],
+            ]
+        );
+
+        $result = $midtrans->createTransaction($params);
+
+        if (!$result || !$result['token']) {
+            $payment->update(['status' => 'failed']);
+            return response()->json(['success' => false, 'message' => 'Gagal membuat token pembayaran.'], 500);
         }
-        $bill->save();
+
+        $payment->update(['snap_token' => $result['token']]);
 
         return response()->json([
             'success' => true,
-            'message' => 'Pembayaran berhasil.',
+            'message' => 'Token pembayaran berhasil dibuat.',
             'data' => [
-                'payment' => new PaymentResource($payment),
-                'bill' => new BillResource($bill->fresh()),
+                'snap_token' => $result['token'],
+                'redirect_url' => $result['redirect_url'],
+                'order_id' => $orderId,
+                'payment_id' => $payment->id,
+                'amount' => $payAmount,
+            ],
+        ]);
+    }
+
+    /**
+     * Check payment status
+     */
+    public function checkStatus(Request $request): JsonResponse
+    {
+        $request->validate(['order_id' => 'required|string']);
+
+        $student = $request->user()->student;
+        $payment = Payment::where('transaction_id', $request->order_id)
+            ->where('student_id', $student->id)
+            ->first();
+
+        if (!$payment) {
+            return response()->json(['success' => false, 'message' => 'Pembayaran tidak ditemukan.'], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'order_id' => $payment->transaction_id,
+                'status' => $payment->status,
+                'amount' => $payment->amount,
+                'payment_method' => $payment->payment_method,
+                'paid_at' => $payment->paid_at?->format('Y-m-d H:i'),
+            ],
+        ]);
+    }
+
+    /**
+     * Show single bill detail
+     */
+    public function show(Request $request, $id): JsonResponse
+    {
+        $student = $request->user()->student;
+        $bill = $student->bills()->with('payments')->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $bill->id,
+                'title' => $bill->title,
+                'description' => $bill->description,
+                'amount' => $bill->amount,
+                'paid_amount' => $bill->paid_amount,
+                'remaining' => $bill->amount - $bill->paid_amount,
+                'due_date' => $bill->due_date?->format('Y-m-d'),
+                'status' => $bill->status,
+                'type' => $bill->type,
+                'payments' => $bill->payments->map(fn($p) => [
+                    'id' => $p->id,
+                    'amount' => $p->amount,
+                    'payment_method' => $p->payment_method,
+                    'transaction_id' => $p->transaction_id,
+                    'status' => $p->status,
+                    'paid_at' => $p->paid_at?->format('Y-m-d H:i'),
+                ]),
+                'created_at' => $bill->created_at?->format('Y-m-d H:i'),
             ],
         ]);
     }

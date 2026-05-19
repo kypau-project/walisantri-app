@@ -41,9 +41,9 @@ class AuthController extends Controller
             return redirect('/admin/dashboard');
         }
 
-        // Cari student berdasarkan NIS atau nama
+        // Cari student berdasarkan NIS atau nama (case-insensitive)
         $student = Student::where('nis', $identifier)
-            ->orWhere('name', $identifier)
+            ->orWhereRaw('LOWER(name) = ?', [strtolower($identifier)])
             ->first();
 
         if (!$student) {
@@ -84,8 +84,8 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        // Cari student berdasarkan nama DAN NIS
-        $student = Student::where('name', $request->student_name)
+        // Cari student berdasarkan nama DAN NIS (case-insensitive)
+        $student = Student::whereRaw('LOWER(name) = ?', [strtolower($request->student_name)])
             ->where('nis', $request->nis)
             ->first();
 

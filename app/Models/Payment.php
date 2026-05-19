@@ -18,6 +18,8 @@ class Payment extends Model
         'status',
         'paid_at',
         'notes',
+        'snap_token',
+        'midtrans_response',
     ];
 
     protected function casts(): array
@@ -25,6 +27,7 @@ class Payment extends Model
         return [
             'amount' => 'decimal:2',
             'paid_at' => 'datetime',
+            'midtrans_response' => 'array',
         ];
     }
 

@@ -15,9 +15,11 @@ return new class extends Migration
             $table->decimal('amount', 12, 2);
             $table->string('payment_method')->default('transfer');
             $table->string('transaction_id')->unique();
-            $table->enum('status', ['pending', 'success', 'failed', 'refunded'])->default('pending');
+            $table->enum('status', ['pending', 'success', 'failed', 'refunded', 'expire'])->default('pending');
             $table->timestamp('paid_at')->nullable();
             $table->text('notes')->nullable();
+            $table->string('snap_token')->nullable();
+            $table->json('midtrans_response')->nullable();
             $table->timestamps();
         });
     }

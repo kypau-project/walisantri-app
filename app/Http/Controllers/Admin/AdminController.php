@@ -250,39 +250,5 @@ class AdminController extends Controller
 
         return redirect('/admin/reports')->with('success', 'Raport berhasil dibuat.');
     }
-
-    // ===== EXAM MANAGEMENT =====
-    public function exams()
-    {
-        $exams = Exam::withCount('students')->orderBy('exam_date', 'desc')->paginate(20);
-        return view('admin.exams.index', compact('exams'));
-    }
-
-    public function createExam()
-    {
-        $students = Student::orderBy('name')->get();
-        return view('admin.exams.create', compact('students'));
-    }
-
-    public function storeExam(Request $request)
-    {
-        $request->validate([
-            'title' => 'required|string|max:255',
-            'subject' => 'required|string',
-            'exam_date' => 'required|date',
-            'duration_minutes' => 'required|integer|min:10',
-            'exam_url' => 'nullable|url',
-            'student_ids' => 'nullable|array',
-        ]);
-
-        $exam = Exam::create($request->only('title', 'description', 'subject', 'exam_date', 'duration_minutes', 'exam_url'));
-
-        if ($request->student_ids) {
-            $exam->students()->attach($request->student_ids);
-        } else {
-            $exam->students()->attach(Student::pluck('id'));
-        }
-
-        return redirect('/admin/exams')->with('success', 'Ujian berhasil dibuat.');
-    }
 }
+
