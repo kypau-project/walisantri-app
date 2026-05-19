@@ -512,7 +512,8 @@ await launchUrl(Uri.parse(snapData['redirect_url']));
 **Metode Pembayaran yang Tersedia:**
 | Kategori | Metode |
 |----------|--------|
-| Virtual Account | BCA, BNI, BRI, Permata, dll |
+| Kartu Debit/Credit | Visa, Mastercard, JCB |
+| Virtual Account | BCA, BNI, BRI, Permata, Mandiri Bill |
 | E-Wallet | GoPay, ShopeePay |
 | QRIS | Semua bank & e-wallet |
 | Mitra/Agen | Indomaret, Alfamart |
@@ -892,3 +893,30 @@ Navigator.push(context, MaterialPageRoute(
 **Admin:** username `admin`, password `admin123`
 
 > Login bisa menggunakan nama (case-insensitive) atau NIS
+
+---
+
+## ⚙️ Midtrans Webhook Configuration
+
+Agar pembayaran otomatis memotong tagihan, konfigurasi **Payment Notification URL** di Midtrans Dashboard:
+
+1. Buka [Midtrans Sandbox Dashboard](https://dashboard.sandbox.midtrans.com) → **Settings → Configuration**
+2. Set **Payment Notification URL**:
+   ```
+   https://dbs-santriapp.kypau.my.id/midtrans/notification
+   ```
+3. Klik **Save**
+
+### Webhook Flow:
+```
+User bayar → Midtrans proses → POST /midtrans/notification → Server update payment + bill → Tagihan terpotong
+```
+
+### Sandbox Test Cards:
+| Keterangan | Nomor Kartu | CVV | Exp |
+|---|---|---|---|
+| ✅ Sukses (Visa) | `4811 1111 1111 1114` | `123` | `01/29` |
+| ✅ Sukses (Mastercard) | `5211 1111 1111 1117` | `123` | `01/29` |
+| ❌ Ditolak | `4911 1111 1111 1113` | `123` | `01/29` |
+
+> OTP/3DS Password: `112233`
