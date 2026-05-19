@@ -27,11 +27,6 @@ class SavingTransaction extends Model
         ];
     }
 
-    public function saving()
-    {
-        return $this->belongsTo(Saving::class, 'saving_id');
-    }
-
     public function savingAccount()
     {
         return $this->belongsTo(Saving::class, 'saving_id');

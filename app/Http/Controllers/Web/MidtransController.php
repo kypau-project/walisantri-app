@@ -266,7 +266,7 @@ class MidtransController extends Controller
 
         if (($transactionStatus === 'capture' || $transactionStatus === 'settlement') && $fraudStatus === 'accept') {
             // Credit the savings balance
-            $saving = $transaction->saving;
+            $saving = $transaction->savingAccount;
             $saving->balance += $transaction->amount;
             $saving->save();
 
