@@ -66,13 +66,20 @@ Login via nama santri (case-insensitive) atau NIS.
     "user": {
       "id": 1,
       "name": "Umar Abdullah",
-      "role": "walisantri"
+      "username": "2024005",
+      "role": "wali",
+      "phone": "085678901234"
     },
     "student": {
       "id": 5,
       "name": "Umar Abdullah",
       "nis": "2024005",
-      "class": "3A-PA"
+      "nisn": "0071234571",
+      "class": "3A-PA",
+      "room": "A5",
+      "enrollment_year": "2022-2023",
+      "gender": "L",
+      "...dan field lainnya...": "..."
     },
     "token": "1|abc123def456..."
   }
@@ -83,7 +90,22 @@ Login via nama santri (case-insensitive) atau NIS.
 ```json
 {
   "success": false,
-  "message": "Password salah."
+  "message": "Nama santri/NIS atau password salah."
+}
+```
+
+**Response 403 (belum verifikasi OTP):**
+```json
+{
+  "success": false,
+  "message": "Akun belum diverifikasi. Silakan verifikasi OTP terlebih dahulu.",
+  "requires_verification": true,
+  "data": {
+    "user_id": 1,
+    "phone": "085678901234",
+    "verify_otp_endpoint": "/api/verify-otp",
+    "resend_otp_endpoint": "/api/resend-otp"
+  }
 }
 ```
 
@@ -121,12 +143,17 @@ Daftarkan wali santri baru (harus cocok dengan data santri yang sudah ada di sis
 ```json
 {
   "success": true,
-  "message": "Registrasi berhasil. Silakan verifikasi OTP.",
+  "message": "Registrasi berhasil. Kode OTP telah dikirim ke WhatsApp Anda.",
   "data": {
-    "user": { "id": 10, "name": "Umar Abdullah" },
-    "student": { "id": 5, "name": "Umar Abdullah" },
-    "token": "2|xyz789...",
-    "requires_otp": true
+    "user_id": 10,
+    "phone": "085678901234",
+    "otp_sent": true,
+    "requires_verification": true,
+    "next_step": {
+      "verify_otp_endpoint": "/api/verify-otp",
+      "resend_otp_endpoint": "/api/resend-otp",
+      "otp_expires_in_seconds": 300
+    }
   }
 }
 ```
@@ -134,37 +161,69 @@ Daftarkan wali santri baru (harus cocok dengan data santri yang sudah ada di sis
 ---
 
 ### POST `/verify-otp`
-Verifikasi kode OTP yang dikirim ke WhatsApp.
+Verifikasi kode OTP 6 digit yang dikirim ke WhatsApp.
 
-**Headers:** `Authorization: Bearer {token}`
+> ⚠️ Endpoint ini **TIDAK** membutuhkan Authorization header. Gunakan `user_id` dari response register.
 
 **Request:**
 ```json
 {
-  "otp": "123456"
+  "user_id": 10,
+  "otp_code": "482916"
 }
 ```
+> `otp_code` harus **6 digit** string.
 
 **Response 200:**
 ```json
 {
   "success": true,
-  "message": "Nomor HP berhasil diverifikasi."
+  "message": "Verifikasi berhasil! Akun Anda sudah aktif.",
+  "data": {
+    "user": {
+      "id": 10,
+      "name": "Umar Abdullah",
+      "username": "2024005",
+      "role": "wali",
+      "phone": "085678901234"
+    },
+    "student": { "...student data..." },
+    "token": "2|xyz789..."
+  }
 }
 ```
 
 ---
 
 ### POST `/resend-otp`
-Kirim ulang kode OTP.
+Kirim ulang kode OTP (rate limit: 1x per 60 detik).
 
-**Headers:** `Authorization: Bearer {token}`
+> ⚠️ Endpoint ini **TIDAK** membutuhkan Authorization header. Gunakan `user_id` dari response register.
+
+**Request:**
+```json
+{
+  "user_id": 10
+}
+```
 
 **Response 200:**
 ```json
 {
   "success": true,
-  "message": "Kode OTP baru telah dikirim."
+  "message": "Kode OTP baru telah dikirim ke WhatsApp Anda.",
+  "data": {
+    "phone": "085678901234",
+    "otp_sent": true
+  }
+}
+```
+
+**Response 429 (rate limit):**
+```json
+{
+  "success": false,
+  "message": "Tunggu 45 detik sebelum mengirim ulang OTP."
 }
 ```
 
@@ -197,13 +256,18 @@ Data user yang sedang login.
   "data": {
     "id": 1,
     "name": "Umar Abdullah",
-    "role": "walisantri",
-    "phone_verified": true,
+    "username": "2024005",
+    "role": "wali",
+    "phone": "085678901234",
+    "is_verified": true,
     "student": {
       "id": 5,
       "name": "Umar Abdullah",
       "nis": "2024005",
-      "class": "3A-PA"
+      "nisn": "0071234571",
+      "class": "3A-PA",
+      "room": "A5",
+      "...dan field lainnya...": "..."
     }
   }
 }

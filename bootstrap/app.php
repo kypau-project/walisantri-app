@@ -12,7 +12,14 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->statefulApi();
+        // Note: statefulApi() removed — Flutter uses token-based auth (Bearer token),
+        // not cookie/session SPA auth. statefulApi() was causing "Host not in allowlist"
+        // errors because it validates Origin/Referer against SANCTUM_STATEFUL_DOMAINS.
+
+        $middleware->api(prepend: [
+            \Illuminate\Http\Middleware\HandleCors::class,
+        ]);
+
         $middleware->validateCsrfTokens(except: [
             'midtrans/*',
             '/midtrans/notification',
